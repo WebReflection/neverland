@@ -36,5 +36,13 @@
     "rollup-plugin-babel": "^4.0.3",
     "rollup-plugin-node-resolve": "^3.4.0",
     "uglify-es": "^3.3.9"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WebReflection/neverland.git"
+  },
+  "bugs": {
+    "url": "https://github.com/WebReflection/neverland/issues"
+  },
+  "homepage": "https://github.com/WebReflection/neverland#readme"
 }
