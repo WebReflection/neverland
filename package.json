@@ -1,0 +1,40 @@
+{
+  "name": "neverland",
+  "version": "0.0.0",
+  "description": "React like Hooks for hyperHTML",
+  "main": "cjs/index.js",
+  "module": "esm/index.js",
+  "unpkg": "min.js",
+  "scripts": {
+    "build": "npm run rollup && npm run cjs && npm run min && npm run test && npm run size",
+    "cjs": "ascjs esm cjs",
+    "min": "uglifyjs index.js --comments=/^!/ -c -m -o min.js",
+    "rollup": "rollup --config rollup.config.js",
+    "size": "cat index.js | wc -c;cat min.js | wc -c;gzip -c9 min.js | wc -c",
+    "test": "cp index.js test/neverland.js && npm run server & (sleep 1 && npm run nightmare && npm run kill)",
+    "nightmare": "node test || (npm run kill && exit 1)",
+    "server": "node -e 'require(`fs`).writeFileSync(`pid`,require(`child_process`).spawn(`http-server`,[`test`,`-s`]).pid);'",
+    "kill": "kill -9 $(cat pid) && rm -f pid"
+  },
+  "keywords": [
+    "React",
+    "Hooks",
+    "hyperHTML"
+  ],
+  "author": "Andrea Giammarchi",
+  "license": "ISC",
+  "dependencies": {
+    "hyperhtml": "^2.16.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.1.2",
+    "@babel/preset-env": "^7.1.0",
+    "ascjs": "^2.5.1",
+    "http-server": "^0.11.1",
+    "nightmare": "^3.0.1",
+    "rollup": "^0.66.6",
+    "rollup-plugin-babel": "^4.0.3",
+    "rollup-plugin-node-resolve": "^3.4.0",
+    "uglify-es": "^3.3.9"
+  }
+}
