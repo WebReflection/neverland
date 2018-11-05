@@ -1,10 +1,10 @@
-import { wire } from 'hyperhtml';
+import $, { wire } from 'hyperhtml';
 
 let lostBoys = 0;
 let appetizer = null;
 let tinkerBell = null;
 
-const theCroc = new WeakMap;
+const theCroc = new $._.WeakMap;
 
 const follow = (tickTock, hook, hand) => {
   const fairy = tinkerBell;

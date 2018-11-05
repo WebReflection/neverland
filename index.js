@@ -70,7 +70,7 @@ var neverland = (function (exports) {
   }; // used to store wired content
 
   var ID = 0;
-  var WeakMap$1 = G.WeakMap || function WeakMap() {
+  var WeakMap = G.WeakMap || function WeakMap() {
     var key = UID + ID++;
     return {
       get: function get(obj) {
@@ -86,7 +86,7 @@ var neverland = (function (exports) {
   }; // used to store hyper.Components
 
   var WeakSet = G.WeakSet || function WeakSet() {
-    var wm = new WeakMap$1();
+    var wm = new WeakMap();
     return {
       add: function add(obj) {
         wm.set(obj, true);
@@ -122,7 +122,7 @@ var neverland = (function (exports) {
   function setup(content) {
     // there are various weakly referenced variables in here
     // and mostly are to use Component.for(...) static method.
-    var children = new WeakMap$1();
+    var children = new WeakMap();
     var create = Object.create;
 
     var createEntry = function createEntry(wm, id, component) {
@@ -136,7 +136,7 @@ var neverland = (function (exports) {
       switch (_typeof(id)) {
         case 'object':
         case 'function':
-          var wm = relation.w || (relation.w = new WeakMap$1());
+          var wm = relation.w || (relation.w = new WeakMap());
           return wm.get(id) || createEntry(wm, id, new Class(context));
 
         default:
@@ -463,7 +463,7 @@ var neverland = (function (exports) {
 
   var TemplateMap = function TemplateMap() {
     try {
-      var wm = new WeakMap$1();
+      var wm = new WeakMap();
       var o_O = Object.freeze([]);
       wm.set(o_O, true);
       if (!wm.get(o_O)) throw o_O;
@@ -523,6 +523,8 @@ var neverland = (function (exports) {
   Wire.prototype.valueOf = function valueOf(different) {
     var noFragment = this._ == null;
     if (noFragment) this._ = fragment(this.first);
+    /* istanbul ignore else */
+
     if (noFragment || different) append(this._, this.childNodes);
     return this._;
   }; // when a wire is removed, all its nodes must be removed as well
@@ -1600,7 +1602,7 @@ var neverland = (function (exports) {
 
   // are already known to hyperHTML
 
-  var bewitched = new WeakMap$1(); // all unique template literals
+  var bewitched = new WeakMap(); // all unique template literals
 
   var templates = TemplateMap(); // better known as hyper.bind(node), the render is
   // the main tag function in charge of fully upgrading
@@ -1671,7 +1673,7 @@ var neverland = (function (exports) {
     return VOID_ELEMENTS.test($1) ? $0 : '<' + $1 + $2 + '></' + $1 + '>';
   };
 
-  var wires = new WeakMap$1(); // A wire is a callback used as tag function
+  var wires = new WeakMap(); // A wire is a callback used as tag function
   // to lazily relate a generic object to a template literal.
   // hyper.wire(user)`<div id=user>${user.name}</div>`; => the div#user
   // This provides the ability to have a unique DOM structure
@@ -1762,14 +1764,43 @@ var neverland = (function (exports) {
   };
 
   /*! (c) Andrea Giammarchi (ISC) */
+  // you can do the following
+  // const {bind, wire} = hyperHTML;
+  // and use them right away: bind(node)`hello!`;
+
+  var bind = function bind(context) {
+    return render.bind(context);
+  };
+
+  var define = Intent.define;
+  hyper.Component = Component;
+  hyper.bind = bind;
+  hyper.define = define;
+  hyper.diff = domdiff;
+  hyper.hyper = hyper;
+  hyper.wire = wire; // exported as shared utils
+  // for projects based on hyperHTML
+  // that don't necessarily need upfront polyfills
+  // i.e. those still targeting IE
+
+  hyper._ = {
+    WeakMap: WeakMap,
+    WeakSet: WeakSet
+  }; // the wire content is the lazy defined
   // html or svg property of each hyper.Component
 
   setup(content); // everything is exported directly or through the
+  // that "magically" understands what's the best
+  // thing to do with passed arguments
+
+  function hyper(HTML) {
+    return arguments.length < 2 ? HTML == null ? content('html') : typeof HTML === 'string' ? hyper.wire(null, HTML) : 'raw' in HTML ? content('html')(HTML) : 'nodeType' in HTML ? hyper.bind(HTML) : weakly(HTML, 'html') : ('raw' in HTML ? content('html') : hyper.wire).apply(null, arguments);
+  }
 
   var lostBoys = 0;
   var appetizer = null;
   var tinkerBell = null;
-  var theCroc = new WeakMap();
+  var theCroc = new hyper._.WeakMap();
 
   var follow = function follow(tickTock, hook, hand) {
     var fairy = tinkerBell;

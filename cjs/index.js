@@ -1,11 +1,12 @@
 'use strict';
+const $ = (m => m.__esModule ? m.default : m)(require('hyperhtml'));
 const { wire } = require('hyperhtml');
 
 let lostBoys = 0;
 let appetizer = null;
 let tinkerBell = null;
 
-const theCroc = new WeakMap;
+const theCroc = new $._.WeakMap;
 
 const follow = (tickTock, hook, hand) => {
   const fairy = tinkerBell;
