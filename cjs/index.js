@@ -6,6 +6,9 @@ let lostBoys = 0;
 let appetizer = null;
 let tinkerBell = null;
 
+const sleep = $._.global.cancelAnimationFrame || clearTimeout;
+const wakeup = sleep == clearTimeout ? setTimeout : requestAnimationFrame;
+
 const theCroc = new $._.WeakMap;
 
 const follow = (tickTock, hook, hand) => {
@@ -36,8 +39,8 @@ const storyTeller = (fairy, tale, onceUponATime) => {
   const Wendy = fairy(tale).valueOf(false);
   const tickTock = theCroc.get(appetizer);
   if (tickTock.fairy) {
-    cancelAnimationFrame(tickTock.clock);
-    tickTock.clock = requestAnimationFrame(tickTock.fairy);
+    sleep(tickTock.clock);
+    tickTock.clock = wakeup(tickTock.fairy);
   }
   tinkerBell = null;
   appetizer = null;

@@ -1784,6 +1784,7 @@ var neverland = (function (exports) {
   // i.e. those still targeting IE
 
   hyper._ = {
+    global: G,
     WeakMap: WeakMap,
     WeakSet: WeakSet
   }; // the wire content is the lazy defined
@@ -1800,6 +1801,8 @@ var neverland = (function (exports) {
   var lostBoys = 0;
   var appetizer = null;
   var tinkerBell = null;
+  var sleep = hyper._.global.cancelAnimationFrame || clearTimeout;
+  var wakeup = sleep == clearTimeout ? setTimeout : requestAnimationFrame;
   var theCroc = new hyper._.WeakMap();
 
   var follow = function follow(tickTock, hook, hand) {
@@ -1832,8 +1835,8 @@ var neverland = (function (exports) {
     var tickTock = theCroc.get(appetizer);
 
     if (tickTock.fairy) {
-      cancelAnimationFrame(tickTock.clock);
-      tickTock.clock = requestAnimationFrame(tickTock.fairy);
+      sleep(tickTock.clock);
+      tickTock.clock = wakeup(tickTock.fairy);
     }
 
     tinkerBell = null;
