@@ -1880,6 +1880,10 @@ var neverland = (function (exports) {
   };
 
   exports.default = neverland;
+  exports.Component = Component;
+  exports.bind = bind;
+  exports.define = define;
+  exports.wire = wire;
   exports.neverland = neverland;
   exports.html = html;
   exports.svg = svg;

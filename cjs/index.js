@@ -1,6 +1,6 @@
 'use strict';
 const $ = (m => m.__esModule ? m.default : m)(require('hyperhtml'));
-const { wire } = require('hyperhtml');
+const { Component, bind, define, wire } = require('hyperhtml');
 
 let lostBoys = 0;
 let appetizer = null;
@@ -71,6 +71,10 @@ const useState = hand => {
 };
 
 Object.defineProperty(exports, '__esModule', {value: true}).default = neverland;
+exports.Component = Component;
+exports.bind = bind;
+exports.define = define;
+exports.wire = wire;
 exports.neverland = neverland;
 exports.html = html;
 exports.svg = svg;

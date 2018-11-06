@@ -1,4 +1,4 @@
-import $, { wire } from 'hyperhtml';
+import $, { Component, bind, define, wire } from 'hyperhtml';
 
 let lostBoys = 0;
 let appetizer = null;
@@ -70,6 +70,7 @@ const useState = hand => {
 
 export default neverland;
 export {
+  Component, bind, define, wire,
   neverland, html, svg,
   useEffect, useReducer, useRef, useState
 };
