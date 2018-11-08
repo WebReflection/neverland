@@ -2,75 +2,103 @@
 const $ = (m => m.__esModule ? m.default : m)(require('hyperhtml'));
 const { Component, bind, define, wire } = require('hyperhtml');
 
-let lostBoys = 0;
-let appetizer = null;
-let tinkerBell = null;
+const { global, WeakMap } = $._;
 
-const sleep = $._.global.cancelAnimationFrame || clearTimeout;
-const wakeup = sleep == clearTimeout ? setTimeout : requestAnimationFrame;
+const details = new WeakMap;
 
-const theCroc = new $._.WeakMap;
+const clear = global.cancelAnimationFrame || clearTimeout;
+const request = clear == clearTimeout ? setTimeout : requestAnimationFrame;
 
-const follow = (tickTock, hook, hand) => {
-  const fairy = tinkerBell;
-  const tale = appetizer;
-  return (tickTock.burp = [hand, action => {
-    hand = hook(hand, action);
-    tickTock.burp[0] = hand;
-    storyTeller(fairy, tale, false);
-  }]);
-};
+let info = null;
 
-const eat = (tickTock, hook, hand) => {
-  const fairy = tinkerBell;
-  const tale = appetizer;
-  return (tickTock[hook] = [hand, hand => {
-    tickTock[hook][0] = hand;
-    storyTeller(fairy, tale, false);
-  }]);
-};
-
-const storyTeller = (fairy, tale, onceUponATime) => {
-  lostBoys = 0;
-  tinkerBell = fairy;
-  appetizer = tale;
-  if (onceUponATime)
-    theCroc.set(appetizer, {clock: 0, fairy: []});
-  const Wendy = fairy(tale).valueOf(false);
-  const tickTock = theCroc.get(appetizer);
-  if (tickTock.fairy.length) {
-    sleep(tickTock.clock);
-    tickTock.clock = wakeup(() => tickTock.fairy.splice(0).forEach($ => $()));
+const circus = (fn, $, init) => {
+  const previously = info;
+  if (init)
+    details.set($, info = {
+      $,
+      fn,
+      html: null,
+      svg: null,
+      i: index(),
+      timer: 0,
+      effect: [],
+      reducer: [],
+      ref: [],
+      state: [],
+    });
+  else {
+    info = details.get($);
+    info.i = index();
   }
-  tinkerBell = null;
-  appetizer = null;
-  return Wendy;
+  const node = fn($).valueOf(false);
+  if (info.i.effect) {
+    clear(info.timer);
+    info.timer = request(invoke(info.effect.splice(0)));
+  }
+  info = previously;
+  return node;
 };
 
-const neverland = fairy => (tale = {}) => storyTeller(fairy, tale, true);
-
-const html = (...mermaids) => wire(appetizer, 'html')(...mermaids);
-const svg = (...mermaids) => wire(appetizer, 'svg')(...mermaids);
-
-const useEffect = fairy => {
-  const tickTock = theCroc.get(appetizer);
-  tickTock.fairy.push(fairy);
+const createReducer = (i, callback, value) => {
+  const {reducer, fn, $} = info;
+  return reducer[i] = [value, action => {
+    value = callback(value, action);
+    reducer[i][0] = value;
+    circus(fn, $, false);
+  }];
 };
 
-const useReducer = (hook, hand) => {
-  const tickTock = theCroc.get(appetizer);
-  return tickTock.burp || follow(tickTock, hook, hand);
+const createState = (i, value) => {
+  const {state, fn, $} = info;
+  return state[i] = [value, value => {
+    state[i][0] = value;
+    circus(fn, $, false);
+  }];
 };
 
-const useRef = (hand) => {
-  const tickTock = theCroc.get(appetizer);
-  return tickTock.watch || (tickTock.watch = {current: hand});
+const lazyWire = type => {
+  return (...args) => {
+    const hyper = (info[type] || (info[type] = wire(info.$, type)));
+    return hyper(...args);
+  };
 };
 
-const useState = hand => {
-  const hook = lostBoys++;
-  const tickTock = theCroc.get(appetizer);
-  return tickTock[hook] || eat(tickTock, hook, hand);
+const index = () => ({
+  effect: 0,
+  reducer: 0,
+  ref: 0,
+  state: 0,
+});
+
+const invoke = fns => () => {
+  fns.forEach(fn => fn());
+};
+
+// exports
+const neverland = fn => ($ = {}) => circus(fn, $, true);
+
+const html = lazyWire('html');
+
+const svg = lazyWire('svg');
+
+const useEffect = callback => {
+  const i = info.i.effect++;
+  return info.effect[i] || (info.effect[i] = callback);
+};
+
+const useReducer = (callback, value) => {
+  const i = info.i.reducer++;
+  return info.reducer[i] || createReducer(i, callback, value);
+};
+
+const useRef = value => {
+  const i = info.i.ref++;
+  return info.ref[i] || (info.ref[i] = {current: value});
+};
+
+const useState = value => {
+  const i = info.i.state++;
+  return info.state[i] || createState(i, value);
 };
 
 Object.defineProperty(exports, '__esModule', {value: true}).default = neverland;

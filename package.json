@@ -8,7 +8,7 @@
   "scripts": {
     "build": "npm run rollup && npm run cjs && npm run min && npm run test && npm run size",
     "cjs": "ascjs esm cjs",
-    "min": "uglifyjs index.js --comments=/^!/ -c -m -o min.js",
+    "min": "echo '/*! (c) Andrea Giammarchi - ISC */' > min.js && uglifyjs index.js -c -m >> min.js",
     "rollup": "rollup --config rollup.config.js",
     "size": "cat index.js | wc -c;cat min.js | wc -c;gzip -c9 min.js | wc -c",
     "test": "cp index.js test/neverland.js && npm run server & (sleep 1 && npm run nightmare && npm run kill)",
