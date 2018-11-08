@@ -35,12 +35,12 @@ const storyTeller = (fairy, tale, onceUponATime) => {
   tinkerBell = fairy;
   appetizer = tale;
   if (onceUponATime)
-    theCroc.set(appetizer, {clock: 0});
+    theCroc.set(appetizer, {clock: 0, fairy: []});
   const Wendy = fairy(tale).valueOf(false);
   const tickTock = theCroc.get(appetizer);
-  if (tickTock.fairy) {
+  if (tickTock.fairy.length) {
     sleep(tickTock.clock);
-    tickTock.clock = wakeup(tickTock.fairy);
+    tickTock.clock = wakeup(() => tickTock.fairy.splice(0).forEach($ => $()));
   }
   tinkerBell = null;
   appetizer = null;
@@ -54,7 +54,7 @@ const svg = (...mermaids) => wire(appetizer, 'svg')(...mermaids);
 
 const useEffect = fairy => {
   const tickTock = theCroc.get(appetizer);
-  tickTock.fairy = fairy;
+  tickTock.fairy.push(fairy);
 };
 
 const useReducer = (hook, hand) => {

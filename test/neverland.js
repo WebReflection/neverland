@@ -1829,14 +1829,19 @@ var neverland = (function (exports) {
     tinkerBell = fairy;
     appetizer = tale;
     if (onceUponATime) theCroc.set(appetizer, {
-      clock: 0
+      clock: 0,
+      fairy: []
     });
     var Wendy = fairy(tale).valueOf(false);
     var tickTock = theCroc.get(appetizer);
 
-    if (tickTock.fairy) {
+    if (tickTock.fairy.length) {
       sleep(tickTock.clock);
-      tickTock.clock = wakeup(tickTock.fairy);
+      tickTock.clock = wakeup(function () {
+        return tickTock.fairy.splice(0).forEach(function ($) {
+          return $();
+        });
+      });
     }
 
     tinkerBell = null;
@@ -1861,7 +1866,7 @@ var neverland = (function (exports) {
 
   var useEffect = function useEffect(fairy) {
     var tickTock = theCroc.get(appetizer);
-    tickTock.fairy = fairy;
+    tickTock.fairy.push(fairy);
   };
 
   var useReducer = function useReducer(hook, hand) {
