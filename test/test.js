@@ -47,13 +47,15 @@ addEventListener(
     const ReducedCounter = MrSmee(() => {
       const [state, dispatch] = useReducer(reducer, initialState);
       useEffect(() => console.log(state));
+      useEffect(() => console.log('moar effects!'));
       return html`
-          Count: ${state.count}
+          Count: ${state.count}<br/>
           <button onclick=${() => dispatch({type: 'reset'})}>
             Reset
           </button>
           <button onclick=${() => dispatch({type: 'increment'})}>+</button>
           <button onclick=${() => dispatch({type: 'decrement'})}>-</button>
+          <hr>
       `;
     });
 
@@ -65,16 +67,24 @@ addEventListener(
     // not better than invoking callbacks when live/offline status changes
     const RefCounter = MrSmee(() => {
       const [count, setCount] = useState(0);
+      const [icount, setICount] = useState(0);
       const {current: increment} = useRef(
         Math.ceil(Math.random() * 5)
       );
       return html`
-      <button
-        onconnected=${() => console.log(window.log = 'Harrrrrrrr!!')}
-        onclick=${() => setCount(count + increment)}
-      >
-        Count: ${count}
-      </button>`;
+      <div>
+        <p>Count: ${count}</p>
+        <p>Increment: ${increment}</p>
+        <button
+          onconnected=${() => console.log(window.log = 'Harrrrrrrr!!')}
+          onclick=${() => {
+            setCount(count + 1);
+            setICount(icount + increment);
+          }}
+        >
+          Incremented Count: ${icount}
+        </button>
+      </div>`;
     });
 
     demo(RefCounter);

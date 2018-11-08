@@ -1798,93 +1798,120 @@ var neverland = (function (exports) {
     return arguments.length < 2 ? HTML == null ? content('html') : typeof HTML === 'string' ? hyper.wire(null, HTML) : 'raw' in HTML ? content('html')(HTML) : 'nodeType' in HTML ? hyper.bind(HTML) : weakly(HTML, 'html') : ('raw' in HTML ? content('html') : hyper.wire).apply(null, arguments);
   }
 
-  var lostBoys = 0;
-  var appetizer = null;
-  var tinkerBell = null;
-  var sleep = hyper._.global.cancelAnimationFrame || clearTimeout;
-  var wakeup = sleep == clearTimeout ? setTimeout : requestAnimationFrame;
-  var theCroc = new hyper._.WeakMap();
+  var _$$_ = hyper._,
+      global = _$$_.global,
+      WeakMap$1 = _$$_.WeakMap;
+  var details = new WeakMap$1();
+  var clear = global.cancelAnimationFrame || clearTimeout;
+  var request = clear == clearTimeout ? setTimeout : requestAnimationFrame;
+  var info = null;
 
-  var follow = function follow(tickTock, hook, hand) {
-    var fairy = tinkerBell;
-    var tale = appetizer;
-    return tickTock.burp = [hand, function (action) {
-      hand = hook(hand, action);
-      tickTock.burp[0] = hand;
-      storyTeller(fairy, tale, false);
-    }];
-  };
+  var circus = function circus(fn, $, init) {
+    var previously = info;
+    if (init) details.set($, info = {
+      $: $,
+      fn: fn,
+      html: null,
+      svg: null,
+      i: index(),
+      timer: 0,
+      effect: [],
+      reducer: [],
+      ref: [],
+      state: []
+    });else {
+      info = details.get($);
+      info.i = index();
+    }
+    var node = fn($).valueOf(false);
 
-  var eat = function eat(tickTock, hook, hand) {
-    var fairy = tinkerBell;
-    var tale = appetizer;
-    return tickTock[hook] = [hand, function (hand) {
-      tickTock[hook][0] = hand;
-      storyTeller(fairy, tale, false);
-    }];
-  };
-
-  var storyTeller = function storyTeller(fairy, tale, onceUponATime) {
-    lostBoys = 0;
-    tinkerBell = fairy;
-    appetizer = tale;
-    if (onceUponATime) theCroc.set(appetizer, {
-      clock: 0,
-      fairy: []
-    });
-    var Wendy = fairy(tale).valueOf(false);
-    var tickTock = theCroc.get(appetizer);
-
-    if (tickTock.fairy.length) {
-      sleep(tickTock.clock);
-      tickTock.clock = wakeup(function () {
-        return tickTock.fairy.splice(0).forEach(function ($) {
-          return $();
-        });
-      });
+    if (info.i.effect) {
+      clear(info.timer);
+      info.timer = request(invoke(info.effect.splice(0)));
     }
 
-    tinkerBell = null;
-    appetizer = null;
-    return Wendy;
+    info = previously;
+    return node;
   };
 
-  var neverland = function neverland(fairy) {
+  var createReducer = function createReducer(i, callback, value) {
+    var _info = info,
+        reducer = _info.reducer,
+        fn = _info.fn,
+        $ = _info.$;
+    return reducer[i] = [value, function (action) {
+      value = callback(value, action);
+      reducer[i][0] = value;
+      circus(fn, $, false);
+    }];
+  };
+
+  var createState = function createState(i, value) {
+    var _info2 = info,
+        state = _info2.state,
+        fn = _info2.fn,
+        $ = _info2.$;
+    return state[i] = [value, function (value) {
+      state[i][0] = value;
+      circus(fn, $, false);
+    }];
+  };
+
+  var lazyWire = function lazyWire(type) {
     return function () {
-      var tale = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-      return storyTeller(fairy, tale, true);
+      var hyper$$1 = info[type] || (info[type] = wire(info.$, type));
+      return hyper$$1.apply(void 0, arguments);
     };
   };
 
-  var html = function html() {
-    return wire(appetizer, 'html').apply(void 0, arguments);
+  var index = function index() {
+    return {
+      effect: 0,
+      reducer: 0,
+      ref: 0,
+      state: 0
+    };
   };
 
-  var svg = function svg() {
-    return wire(appetizer, 'svg').apply(void 0, arguments);
+  var invoke = function invoke(fns) {
+    return function () {
+      fns.forEach(function (fn) {
+        return fn();
+      });
+    };
+  }; // exports
+
+
+  var neverland = function neverland(fn) {
+    return function () {
+      var $ = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+      return circus(fn, $, true);
+    };
   };
 
-  var useEffect = function useEffect(fairy) {
-    var tickTock = theCroc.get(appetizer);
-    tickTock.fairy.push(fairy);
+  var html = lazyWire('html');
+  var svg = lazyWire('svg');
+
+  var useEffect = function useEffect(callback) {
+    var i = info.i.effect++;
+    return info.effect[i] || (info.effect[i] = callback);
   };
 
-  var useReducer = function useReducer(hook, hand) {
-    var tickTock = theCroc.get(appetizer);
-    return tickTock.burp || follow(tickTock, hook, hand);
+  var useReducer = function useReducer(callback, value) {
+    var i = info.i.reducer++;
+    return info.reducer[i] || createReducer(i, callback, value);
   };
 
-  var useRef = function useRef(hand) {
-    var tickTock = theCroc.get(appetizer);
-    return tickTock.watch || (tickTock.watch = {
-      current: hand
+  var useRef = function useRef(value) {
+    var i = info.i.ref++;
+    return info.ref[i] || (info.ref[i] = {
+      current: value
     });
   };
 
-  var useState = function useState(hand) {
-    var hook = lostBoys++;
-    var tickTock = theCroc.get(appetizer);
-    return tickTock[hook] || eat(tickTock, hook, hand);
+  var useState = function useState(value) {
+    var i = info.i.state++;
+    return info.state[i] || createState(i, value);
   };
 
   exports.default = neverland;
