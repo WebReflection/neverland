@@ -73,6 +73,9 @@ var neverland = (function (exports) {
   var WeakMap = G.WeakMap || function WeakMap() {
     var key = UID + ID++;
     return {
+      delete: function _delete(obj) {
+        delete obj[key];
+      },
       get: function get(obj) {
         return obj[key];
       },
@@ -88,6 +91,9 @@ var neverland = (function (exports) {
   var WeakSet = G.WeakSet || function WeakSet() {
     var wm = new WeakMap();
     return {
+      delete: function _delete(obj) {
+        wm.delete(obj);
+      },
       add: function add(obj) {
         wm.set(obj, true);
       },
@@ -299,6 +305,16 @@ var neverland = (function (exports) {
     }
   };
 
+  // TODO:  I'd love to code-cover RegExp too here
+  //        these are fundamental for this library
+  var spaces = ' \\f\\n\\r\\t';
+  var almostEverything = '[^ ' + spaces + '\\/>"\'=]+';
+  var attrName = '[ ' + spaces + ']+' + almostEverything;
+  var tagName = '<([A-Za-z]+[A-Za-z0-9:_-]*)((?:';
+  var attrPartials = '(?:=(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything + '))?)';
+  var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([ ' + spaces + ']*/?>)', 'g');
+  var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([ ' + spaces + ']*/>)', 'g');
+
   // these are tiny helpers to simplify most common operations needed here
   var create = function create(node, type) {
     return doc(node).createElement(type);
@@ -312,16 +328,6 @@ var neverland = (function (exports) {
   var text = function text(node, _text) {
     return doc(node).createTextNode(_text);
   };
-
-  // TODO:  I'd love to code-cover RegExp too here
-  //        these are fundamental for this library
-  var spaces = ' \\f\\n\\r\\t';
-  var almostEverything = '[^ ' + spaces + '\\/>"\'=]+';
-  var attrName = '[ ' + spaces + ']+' + almostEverything;
-  var tagName = '<([A-Za-z]+[A-Za-z0-9:_-]*)((?:';
-  var attrPartials = '(?:=(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything + '))?)';
-  var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([ ' + spaces + ']*/?>)', 'g');
-  var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([ ' + spaces + ']*/>)', 'g');
 
   var testFragment = fragment(document); // DOM4 node.append(...many)
 
@@ -1290,7 +1296,17 @@ var neverland = (function (exports) {
   }; // list of attributes that should not be directly assigned
 
 
-  var readOnly = /^(?:form|list)$/i; // in a hyper(node)`<div>${content}</div>` case
+  var readOnly = /^(?:form|list)$/i; // exposed to make any node observable through
+  // connected / disconnected event listeners
+
+  var observe = function observe(node) {
+    if (notObserving) {
+      notObserving = false;
+      startObserving();
+    }
+
+    components.add(node);
+  }; // in a hyper(node)`<div>${content}</div>` case
   // everything could happen:
   //  * it's a JS primitive, stored as text
   //  * it's null or undefined, the node should be cleaned
@@ -1299,6 +1315,7 @@ var neverland = (function (exports) {
   //  * it's an explicit intent, perform the desired operation
   //  * it's an Array, resolve all values if Promises and/or
   //    update the node with the resulting list of content
+
 
   var setAnyContent = function setAnyContent(node, childNodes) {
     var diffOptions = {
@@ -1417,12 +1434,7 @@ var neverland = (function (exports) {
         var type = name.slice(2);
 
         if (type === CONNECTED || type === DISCONNECTED) {
-          if (notObserving) {
-            notObserving = false;
-            observe();
-          }
-
-          components.add(node);
+          observe(node);
         } else if (name.toLowerCase() in node) {
           type = type.toLowerCase();
         }
@@ -1530,21 +1542,37 @@ var neverland = (function (exports) {
   var Updates = {
     create: create$1,
     find: find
-  }; // hyper.Components might need connected/disconnected notifications
+  };
   // used by components and their onconnect/ondisconnect callbacks.
   // When one of these callbacks is encountered,
   // the document starts being observed.
 
   var notObserving = true;
 
-  function observe() {
-    // when hyper.Component related DOM nodes
+  function startObserving() {
+    // used to avoid duplicated invokes of
+    // dis/connected nodes and their children
+    // - - -
+    // this has been verified in Neverland,
+    // a node observed and dispatched via children loop
+    // might also be part of the nodes that have been inserted
+    // or removed, so but triggering twice should **never** happen
+    var dispatched = null;
+
+    var init = function init() {
+      dispatched = {
+        disconnected: new WeakSet(),
+        connected: new WeakSet()
+      };
+    }; // when hyper.Component related DOM nodes
     // are appended or removed from the live tree
     // these might listen to connected/disconnected events
     // This utility is in charge of finding all components
     // involved in the DOM update/change and dispatch
     // related information to them
-    var dispatchAll = function dispatchAll(nodes, type) {
+
+
+    var dispatchAll = function dispatchAll(nodes, type, counter) {
       var event = new Event(type);
       var length = nodes.length;
 
@@ -1552,15 +1580,17 @@ var neverland = (function (exports) {
         var node = nodes[i];
 
         if (node.nodeType === ELEMENT_NODE) {
-          dispatchTarget(node, event);
+          dispatchTarget(node, event, type, counter);
         }
       }
     }; // the way it's done is via the components weak set
     // and recursively looking for nested components too
 
 
-    var dispatchTarget = function dispatchTarget(node, event) {
-      if (components.has(node)) {
+    var dispatchTarget = function dispatchTarget(node, event, type, counter) {
+      if (components.has(node) && !dispatched[type].has(node)) {
+        dispatched[counter].delete(node);
+        dispatched[type].add(node);
         node.dispatchEvent(event);
       }
       /* istanbul ignore next */
@@ -1570,7 +1600,7 @@ var neverland = (function (exports) {
       var length = children.length;
 
       for (var i = 0; i < length; i++) {
-        dispatchTarget(children[i], event);
+        dispatchTarget(children[i], event, type, counter);
       }
     }; // The MutationObserver is the best way to implement that
     // but there is a fallback to deprecated DOMNodeInserted/Removed
@@ -1580,22 +1610,29 @@ var neverland = (function (exports) {
     try {
       new MutationObserver(function (records) {
         var length = records.length;
+        init();
 
         for (var i = 0; i < length; i++) {
           var record = records[i];
-          dispatchAll(record.removedNodes, DISCONNECTED);
-          dispatchAll(record.addedNodes, CONNECTED);
+          dispatchAll(record.removedNodes, DISCONNECTED, CONNECTED);
+          dispatchAll(record.addedNodes, CONNECTED, DISCONNECTED);
         }
+
+        dispatched = null;
       }).observe(document, {
         subtree: true,
         childList: true
       });
     } catch (o_O) {
       document.addEventListener('DOMNodeRemoved', function (event) {
-        dispatchAll([event.target], DISCONNECTED);
+        init();
+        dispatchAll([event.target], DISCONNECTED, CONNECTED);
+        dispatched = null;
       }, false);
       document.addEventListener('DOMNodeInserted', function (event) {
-        dispatchAll([event.target], CONNECTED);
+        init();
+        dispatchAll([event.target], CONNECTED, DISCONNECTED);
+        dispatched = null;
       }, false);
     }
   }
@@ -1778,6 +1815,7 @@ var neverland = (function (exports) {
   hyper.define = define;
   hyper.diff = domdiff;
   hyper.hyper = hyper;
+  hyper.observe = observe;
   hyper.wire = wire; // exported as shared utils
   // for projects based on hyperHTML
   // that don't necessarily need upfront polyfills
@@ -1798,6 +1836,8 @@ var neverland = (function (exports) {
     return arguments.length < 2 ? HTML == null ? content('html') : typeof HTML === 'string' ? hyper.wire(null, HTML) : 'raw' in HTML ? content('html')(HTML) : 'nodeType' in HTML ? hyper.bind(HTML) : weakly(HTML, 'html') : ('raw' in HTML ? content('html') : hyper.wire).apply(null, arguments);
   }
 
+  var CONNECTED$1 = 'connected',
+      DISCONNECTED$1 = 'disconnected';
   var _$$_ = hyper._,
       global = _$$_.global,
       WeakMap$1 = _$$_.WeakMap;
@@ -1811,23 +1851,60 @@ var neverland = (function (exports) {
     if (init) details.set($, info = {
       $: $,
       fn: fn,
-      html: null,
-      svg: null,
       i: index(),
       timer: 0,
+      html: null,
+      svg: null,
+      counter: [],
       effect: [],
+      layout: [],
       reducer: [],
       ref: [],
-      state: []
+      state: [],
+      handleEvent: function handleEvent(e) {
+        var previously = info;
+        info = this;
+
+        if (e.type === CONNECTED$1) {
+          this.counter = this.effect.splice(0).map(function (fn) {
+            return fn();
+          });
+        } else {
+          clear(this.timer);
+          this.counter.splice(0).forEach(function (fn) {
+            if (fn) fn();
+          });
+        }
+
+        info = previously;
+      }
     });else {
       info = details.get($);
       info.i = index();
     }
+    if (info.counter.length) info.handleEvent({
+      type: DISCONNECTED$1
+    });
     var node = fn($).valueOf(false);
+    var _info$i = info.i,
+        effect = _info$i.effect,
+        layout = _info$i.layout;
+    if (layout) info.layout.forEach(function (fn) {
+      return fn();
+    });
 
-    if (info.i.effect) {
-      clear(info.timer);
-      info.timer = request(invoke(info.effect.splice(0)));
+    if (effect) {
+      if (init) {
+        var target = node.nodeType === 1 ? node : find$1(node);
+        observe(target);
+        target.addEventListener(CONNECTED$1, info);
+        target.addEventListener(DISCONNECTED$1, info);
+      } else {
+        clear(info.timer);
+        info.timer = request(info.handleEvent.bind(info, {
+          type: CONNECTED$1
+        }));
+      }
     }
 
     info = previously;
@@ -1857,6 +1934,18 @@ var neverland = (function (exports) {
     }];
   };
 
+  var find$1 = function find(node) {
+    var childNodes = node.childNodes;
+    var length = childNodes.length;
+
+    for (var i = 0; i < length; i++) {
+      var child = childNodes[i];
+      if (child.nodeType === 1) return child;
+    }
+
+    throw 'unobservable';
+  };
+
   var lazyWire = function lazyWire(type) {
     return function () {
       var hyper$$1 = info[type] || (info[type] = wire(info.$, type));
@@ -1867,17 +1956,10 @@ var neverland = (function (exports) {
   var index = function index() {
     return {
       effect: 0,
+      layout: 0,
       reducer: 0,
       ref: 0,
       state: 0
-    };
-  };
-
-  var invoke = function invoke(fns) {
-    return function () {
-      fns.forEach(function (fn) {
-        return fn();
-      });
     };
   }; // exports
 
@@ -1895,6 +1977,11 @@ var neverland = (function (exports) {
   var useEffect = function useEffect(callback) {
     var i = info.i.effect++;
     return info.effect[i] || (info.effect[i] = callback);
+  };
+
+  var useMutationEffect = function useMutationEffect(callback) {
+    var i = info.i.layout++;
+    return info.layout[i] || (info.layout[i] = callback);
   };
 
   var useReducer = function useReducer(callback, value) {
@@ -1923,6 +2010,7 @@ var neverland = (function (exports) {
   exports.html = html;
   exports.svg = svg;
   exports.useEffect = useEffect;
+  exports.useMutationEffect = useMutationEffect;
   exports.useReducer = useReducer;
   exports.useRef = useRef;
   exports.useState = useState;

@@ -31,8 +31,9 @@ Both `html` and `svg` renders are exposed via the `neverland` module.
 
   * `const [value, setValue] = useState(initialValue)`, similarly to [React useState](https://reactjs.org/docs/hooks-reference.html#usestate), will automatically refresh the view whenever `setValue(newValue)` is invoked, simplifying the manual `update()` or automatic `render()` call, usually needed by _hyperHTML_ views, Custom Elements, or components.
   * `const [state, dispatch] = useReducer(reducer, initialState)`, similarly to [React useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer), will automatically refresh the view whenever `dispatch({any: 'value'})` would reduce the state.
-  * `useEffect(callback)`, similarly to [React useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect), to asynchronously invoke callbacks once all eventual states and reducers have been called. Differently from React, it currently doesn't accept a second parameter and it doesn't understand returned callbacks. This is because _hyperHTML_ already offers `onconnected=${subscribe}` and `ondisconnected=${unsubscribe}` which is a way more efficient mechanism to subscribe, unsubscribe, setup, or clear, any sort of action.
-  * `const {current: value} = useRef(initialValue)`, similarly to [React useRef](https://reactjs.org/docs/hooks-reference.html#useref), it will returns a mutable object whose `.current` property is initialized to the passed `initialValue` argument, persist for the full lifetime of the returned view.
+  * `useEffect(callback)`, similarly to [React useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect), to asynchronously invoke callbacks once all eventual states and reducers have been called. Differently from React, it currently doesn't accept a second parameter.
+  * `useMutationEffect(callback)`, similarly to [React useMutationEffect](https://reactjs.org/docs/hooks-reference.html#usemutationeffect), to synchronously invoke callbacks after any state changed.
+  * `const {current: value} = useRef(initialValue)`, similarly to [React useRef](https://reactjs.org/docs/hooks-reference.html#useref), it will return a mutable object whose `.current` property is initialized to the passed `initialValue` argument, persist for the full lifetime of the returned view.
 
 #### About Missing Hooks
 

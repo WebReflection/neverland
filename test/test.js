@@ -71,12 +71,15 @@ addEventListener(
       const {current: increment} = useRef(
         Math.ceil(Math.random() * 5)
       );
+      useEffect(() => {
+        console.log(window.log = 'Harrrrrrrr!!');
+        return () => console.log('!!rrrrrrrraH');
+      });
       return html`
       <div>
         <p>Count: ${count}</p>
         <p>Increment: ${increment}</p>
         <button
-          onconnected=${() => console.log(window.log = 'Harrrrrrrr!!')}
           onclick=${() => {
             setCount(count + 1);
             setICount(icount + increment);
