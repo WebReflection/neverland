@@ -1857,7 +1857,7 @@ var neverland = (function (exports) {
       svg: null,
       counter: [],
       effect: [],
-      layout: [],
+      mutation: [],
       reducer: [],
       ref: [],
       state: [],
@@ -1888,8 +1888,8 @@ var neverland = (function (exports) {
     var node = fn($).valueOf(false);
     var _info$i = info.i,
         effect = _info$i.effect,
-        layout = _info$i.layout;
-    if (layout) info.layout.forEach(function (fn) {
+        mutation = _info$i.mutation;
+    if (mutation) info.mutation.forEach(function (fn) {
       return fn();
     });
 
@@ -1956,7 +1956,7 @@ var neverland = (function (exports) {
   var index = function index() {
     return {
       effect: 0,
-      layout: 0,
+      mutation: 0,
       reducer: 0,
       ref: 0,
       state: 0
@@ -1980,8 +1980,8 @@ var neverland = (function (exports) {
   };
 
   var useMutationEffect = function useMutationEffect(callback) {
-    var i = info.i.layout++;
-    return info.layout[i] || (info.layout[i] = callback);
+    var i = info.i.mutation++;
+    return info.mutation[i] || (info.mutation[i] = callback);
   };
 
   var useReducer = function useReducer(callback, value) {
@@ -2005,6 +2005,7 @@ var neverland = (function (exports) {
   exports.Component = Component;
   exports.bind = bind;
   exports.define = define;
+  exports.observe = observe;
   exports.wire = wire;
   exports.neverland = neverland;
   exports.html = html;

@@ -23,7 +23,7 @@ const circus = (fn, $, init) => {
       svg: null,
       counter: [],
       effect: [],
-      layout: [],
+      mutation: [],
       reducer: [],
       ref: [],
       state: [],
@@ -46,9 +46,9 @@ const circus = (fn, $, init) => {
   if (info.counter.length)
     info.handleEvent({type: DISCONNECTED});
   const node = fn($).valueOf(false);
-  const {effect, layout} = info.i;
-  if (layout)
-    info.layout.forEach(fn => fn());
+  const {effect, mutation} = info.i;
+  if (mutation)
+    info.mutation.forEach(fn => fn());
   if (effect) {
     if (init) {
       const target = node.nodeType === 1 ? node : find(node);
@@ -101,7 +101,7 @@ const lazyWire = type => {
 
 const index = () => ({
   effect: 0,
-  layout: 0,
+  mutation: 0,
   reducer: 0,
   ref: 0,
   state: 0,
@@ -120,8 +120,8 @@ const useEffect = callback => {
 };
 
 const useMutationEffect = callback => {
-  const i = info.i.layout++;
-  return info.layout[i] || (info.layout[i] = callback);
+  const i = info.i.mutation++;
+  return info.mutation[i] || (info.mutation[i] = callback);
 };
 
 const useReducer = (callback, value) => {
@@ -141,7 +141,7 @@ const useState = value => {
 
 export default neverland;
 export {
-  Component, bind, define, wire,
+  Component, bind, define, observe, wire,
   neverland, html, svg,
   useEffect, useMutationEffect, useReducer, useRef, useState
 };
