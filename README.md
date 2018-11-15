@@ -37,7 +37,7 @@ Both `html` and `svg` renders are exposed via the `neverland` module.
 
 #### About Missing Hooks
 
-At this experimental point, all hooks that are not really suggested, such [useMutationEffect](https://reactjs.org/docs/hooks-reference.html#usemutationeffect) and [useLayoutEffect](https://reactjs.org/docs/hooks-reference.html#uselayouteffect), or that behave in a quite too magic way, such [useMemo](https://reactjs.org/docs/hooks-reference.html#usememo), are not part of this tiny _hyperHTML_ wrapper, and also most likely not needed in a component-less _hyperHTML_ world.
+At this experimental point, all hooks that are not really suggested, such [useLayoutEffect](https://reactjs.org/docs/hooks-reference.html#uselayouteffect), or that behave in a quite too magic way, such [useMemo](https://reactjs.org/docs/hooks-reference.html#usememo), are not part of this tiny _hyperHTML_ wrapper, and also most likely not needed in a component-less _hyperHTML_ world.
 
 ### How To ...
 
