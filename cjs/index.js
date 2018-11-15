@@ -1,6 +1,8 @@
 'use strict';
 const $ = (m => m.__esModule ? m.default : m)(require('hyperhtml'));
-const { Component, bind, define, wire } = require('hyperhtml');
+const { Component, bind, define, observe, wire } = require('hyperhtml');
+
+const [CONNECTED, DISCONNECTED] = ['connected', 'disconnected'];
 
 const { global, WeakMap } = $._;
 
@@ -17,23 +19,48 @@ const circus = (fn, $, init) => {
     details.set($, info = {
       $,
       fn,
-      html: null,
-      svg: null,
       i: index(),
       timer: 0,
+      html: null,
+      svg: null,
+      counter: [],
       effect: [],
+      layout: [],
       reducer: [],
       ref: [],
       state: [],
+      handleEvent(e) {
+        const previously = info;
+        info = this;
+        if (e.type === CONNECTED) {
+          this.counter = this.effect.splice(0).map(fn => fn());
+        } else {
+          clear(this.timer);
+          this.counter.splice(0).forEach(fn => { if (fn) fn(); });
+        }
+        info = previously;
+      }
     });
   else {
     info = details.get($);
     info.i = index();
   }
+  if (info.counter.length)
+    info.handleEvent({type: DISCONNECTED});
   const node = fn($).valueOf(false);
-  if (info.i.effect) {
-    clear(info.timer);
-    info.timer = request(invoke(info.effect.splice(0)));
+  const {effect, layout} = info.i;
+  if (layout)
+    info.layout.forEach(fn => fn());
+  if (effect) {
+    if (init) {
+      const target = node.nodeType === 1 ? node : find(node);
+      observe(target);
+      target.addEventListener(CONNECTED, info);
+      target.addEventListener(DISCONNECTED, info);
+    } else {
+      clear(info.timer);
+      info.timer = request(info.handleEvent.bind(info, {type: CONNECTED}));
+    }
   }
   info = previously;
   return node;
@@ -56,6 +83,17 @@ const createState = (i, value) => {
   }];
 };
 
+const find = node => {
+  const {childNodes} = node;
+  const {length} = childNodes;
+  for (let i = 0; i < length; i++) {
+    const child = childNodes[i];
+    if (child.nodeType === 1)
+      return child;
+  }
+  throw 'unobservable';
+};
+
 const lazyWire = type => {
   return (...args) => {
     const hyper = (info[type] || (info[type] = wire(info.$, type)));
@@ -65,14 +103,11 @@ const lazyWire = type => {
 
 const index = () => ({
   effect: 0,
+  layout: 0,
   reducer: 0,
   ref: 0,
   state: 0,
 });
-
-const invoke = fns => () => {
-  fns.forEach(fn => fn());
-};
 
 // exports
 const neverland = fn => ($ = {}) => circus(fn, $, true);
@@ -84,6 +119,11 @@ const svg = lazyWire('svg');
 const useEffect = callback => {
   const i = info.i.effect++;
   return info.effect[i] || (info.effect[i] = callback);
+};
+
+const useMutationEffect = callback => {
+  const i = info.i.layout++;
+  return info.layout[i] || (info.layout[i] = callback);
 };
 
 const useReducer = (callback, value) => {
@@ -110,6 +150,7 @@ exports.neverland = neverland;
 exports.html = html;
 exports.svg = svg;
 exports.useEffect = useEffect;
+exports.useMutationEffect = useMutationEffect;
 exports.useReducer = useReducer;
 exports.useRef = useRef;
 exports.useState = useState;
