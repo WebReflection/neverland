@@ -4,11 +4,11 @@ const { Component, bind, define, observe, wire } = require('hyperhtml');
 
 const [CONNECTED, DISCONNECTED] = ['connected', 'disconnected'];
 
-const { global, WeakMap } = $._;
+const { WeakMap } = $._;
 
 const details = new WeakMap;
 
-const clear = global.cancelAnimationFrame || clearTimeout;
+const clear = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
 const request = clear == clearTimeout ? setTimeout : requestAnimationFrame;
 
 let info = null;

@@ -1857,11 +1857,9 @@ var neverland = (function (exports) {
 
   var CONNECTED$1 = 'connected',
       DISCONNECTED$1 = 'disconnected';
-  var _$$_ = hyper._,
-      global = _$$_.global,
-      WeakMap$1 = _$$_.WeakMap;
+  var WeakMap$1 = hyper._.WeakMap;
   var details = new WeakMap$1();
-  var clear = global.cancelAnimationFrame || clearTimeout;
+  var clear = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
   var request = clear == clearTimeout ? setTimeout : requestAnimationFrame;
   var info = null;
 
