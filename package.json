@@ -24,7 +24,7 @@
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "dependencies": {
-    "augmentor": "0.0.2",
+    "augmentor": "0.0.4",
     "hyperhtml": "^2.23.1"
   },
   "devDependencies": {
