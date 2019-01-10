@@ -5,16 +5,17 @@ addEventListener(
     const {
       default: MrSmee,  // alias as you prefer
       html,             // svg too if you need it
-      useEffect, useReducer, useRef, useState
+      useEffect, useReducer, useRef, useState,
+      useCallback
     } = neverland;
 
-    const demo = Component => {
+    const demo = (name, Component) => {
       const div = document.body.appendChild(
         document.createElement('div')
       );
       div.appendChild(
         document.createElement('h1')
-      ).textContent = Component.name;
+      ).textContent = name;
       div.appendChild(Component());
     };
 
@@ -27,7 +28,7 @@ addEventListener(
       </button>`;
     });
 
-    demo(Counter);
+    demo('Counter', Counter);
 
 
     // The reducer and effect Hook
@@ -47,19 +48,31 @@ addEventListener(
     const ReducedCounter = MrSmee(() => {
       const [state, dispatch] = useReducer(reducer, initialState);
       useEffect(() => console.log(state));
-      useEffect(() => console.log('moar effects!'));
+      useEffect(() => {
+        console.log('connected effect');
+        return () => {
+          console.log('disconnected effect');
+        };
+      }, []);
       return html`
           Count: ${state.count}<br/>
           <button onclick=${() => dispatch({type: 'reset'})}>
             Reset
           </button>
-          <button onclick=${() => dispatch({type: 'increment'})}>+</button>
-          <button onclick=${() => dispatch({type: 'decrement'})}>-</button>
+          ${[
+            {type: 'increment', text: '+'},
+            {type: 'decrement', text: '-'}
+          ].map(
+            info => html`<button onclick=${() => dispatch(info)}>${info.text}</button>`
+          )}
+          <button onclick=${e => e.currentTarget.closest('div').remove()}>
+            Remove
+          </button>
           <hr>
       `;
     });
 
-    demo(ReducedCounter);
+    demo('ReducedCounter', ReducedCounter);
 
 
     // The useRef Hook plus hyperHTML goodness via on~dis/connected,
@@ -90,7 +103,7 @@ addEventListener(
       </div>`;
     });
 
-    demo(RefCounter);
+    demo('RefCounter', RefCounter);
 
   },
   {once: true}

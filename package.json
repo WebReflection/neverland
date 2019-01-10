@@ -6,7 +6,7 @@
   "module": "esm/index.js",
   "unpkg": "min.js",
   "scripts": {
-    "build": "npm run rollup && npm run cjs && npm run min && npm run test && npm run size",
+    "build": "npm run rollup && drop-babel-typeof index.js && npm run cjs && npm run min && npm run test && npm run size",
     "cjs": "ascjs esm cjs",
     "min": "echo '/*! (c) Andrea Giammarchi - ISC */' > min.js && uglifyjs index.js -c -m >> min.js",
     "rollup": "rollup --config rollup.config.js",
@@ -24,12 +24,14 @@
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "dependencies": {
-    "hyperhtml": "^2.16.8"
+    "augmentor": "0.0.2",
+    "hyperhtml": "^2.23.1"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",
     "@babel/preset-env": "^7.1.0",
     "ascjs": "^2.5.1",
+    "drop-babel-typeof": "^1.0.1",
     "http-server": "^0.11.1",
     "nightmare": "^3.0.1",
     "rollup": "^0.66.6",

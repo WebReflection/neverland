@@ -19,25 +19,37 @@ const Counter = stardust(() => {
 document.body.appendChild(Counter());
 ```
 
-As [React Hooks](https://reactjs.org/docs/hooks-intro.html) were born to simplify some framework pattern, _Neverland_ goal is to simplify some [hyperHTML](https://github.com/WebReflection/hyperHTML#hyperhtml) pattern, in a virtual component way.
+As [React Hooks](https://reactjs.org/docs/hooks-intro.html) were born to simplify some framework pattern, _Neverland_ goal is to simplify some [hyperHTML](https://github.com/WebReflection/hyperHTML#hyperhtml) pattern, in a virtual component way, through the mighty [augmentor](https://github.com/WebReflection/augmentor).
 
 <sup>See what I did there? _React_ components' hooks are based on virtual DOM while _hyperHTML_ neverland's DOM hooks are based on virtual components.</sup>
+
 
 ### Available Renders
 
 Both `html` and `svg` renders are exposed via the `neverland` module.
 
+
 ### Available Hooks
 
-  * `const [value, setValue] = useState(initialValue)`, similarly to [React useState](https://reactjs.org/docs/hooks-reference.html#usestate), will automatically refresh the view whenever `setValue(newValue)` is invoked, simplifying the manual `update()` or automatic `render()` call, usually needed by _hyperHTML_ views, Custom Elements, or components.
-  * `const [state, dispatch] = useReducer(reducer, initialState)`, similarly to [React useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer), will automatically refresh the view whenever `dispatch({any: 'value'})` would reduce the state.
-  * `useEffect(callback)`, similarly to [React useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect), to asynchronously invoke callbacks once all eventual states and reducers have been called. Differently from React, it currently doesn't accept a second parameter.
-  * `useMutationEffect(callback)`, similarly to [React useMutationEffect](https://reactjs.org/docs/hooks-reference.html#usemutationeffect), to synchronously invoke callbacks after any state changed.
-  * `const {current: value} = useRef(initialValue)`, similarly to [React useRef](https://reactjs.org/docs/hooks-reference.html#useref), it will return a mutable object whose `.current` property is initialized to the passed `initialValue` argument, persist for the full lifetime of the returned view.
+All hooks behave as close as possible to their _React_ counter part.
 
-#### About Missing Hooks
+In the `useEffect` case, passing an empty array will make effects run, and eventually clean up, only on `connected` and `disconnected` events, instead of per each render.
 
-At this experimental point, all hooks that are not really suggested, such [useLayoutEffect](https://reactjs.org/docs/hooks-reference.html#uselayouteffect), or that behave in a quite too magic way, such [useMemo](https://reactjs.org/docs/hooks-reference.html#usememo), are not part of this tiny _hyperHTML_ wrapper, and also most likely not needed in a component-less _hyperHTML_ world.
+  * Basic Hooks
+    * [useState](https://reactjs.org/docs/hooks-reference.html#usestate)
+    * [useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect)
+  * Additional Hooks
+    * [useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer)
+    * [useCallback](https://reactjs.org/docs/hooks-reference.html#usecallback)
+    * [useMemo](https://reactjs.org/docs/hooks-reference.html#usememo)
+    * [useRef](https://reactjs.org/docs/hooks-reference.html#useref)
+    * [useLayoutEffect](https://reactjs.org/docs/hooks-reference.html#uselayouteffect)
+
+
+#### About `useContext` and `useImperativeMethods`
+
+These two hooks are strictly _React_ oriented and have no meaning in current _hyperHTML_ world.
+
 
 ### How To ...
 
@@ -47,9 +59,10 @@ If you use a bundler you can simply install `neverland` via npm, without needing
 
 However, it is also possible to use it via https://unpkg.com/neverland and bring it in via:
 
+
 ```js
 // you can import it in any scope
-const {neverland, html, useState} = window.neverland;
+const {default:neverland, html, useState} = window.neverland;
 const VirtualComp = neverland(...);
 
 // or ...

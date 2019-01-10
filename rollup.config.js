@@ -9,6 +9,8 @@ export default {
       presets: ['@babel/preset-env']
     })
   ],
+  context: 'null',
+  moduleContext: 'null',
   output: {
     exports: 'named',
     file: 'index.js',

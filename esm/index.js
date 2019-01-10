@@ -1,147 +1,136 @@
-import $, { Component, bind, define, observe, wire } from 'hyperhtml';
+import {
+  Component,
+  bind,
+  define,
+  observe,
+  wire
+} from 'hyperhtml';
 
-const [CONNECTED, DISCONNECTED] = ['connected', 'disconnected'];
+import augmentor, {
+  useCallback,
+  useEffect as effect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState
+} from 'augmentor';
 
-const { WeakMap } = $._;
-
-const details = new WeakMap;
-
-const clear = typeof cancelAnimationFrame === 'function' ? cancelAnimationFrame : clearTimeout;
-const request = clear == clearTimeout ? setTimeout : requestAnimationFrame;
-
-let info = null;
-
-const circus = (fn, $, init) => {
-  const previously = info;
-  if (init)
-    details.set($, info = {
-      $,
-      fn,
-      i: index(),
-      timer: 0,
-      html: null,
-      svg: null,
-      counter: [],
-      effect: [],
-      mutation: [],
-      reducer: [],
-      ref: [],
-      state: [],
-      handleEvent(e) {
-        const previously = info;
-        info = this;
-        if (e.type === CONNECTED) {
-          this.counter = this.effect.splice(0).map(fn => fn());
-        } else {
-          clear(this.timer);
-          this.counter.splice(0).forEach(fn => { if (fn) fn(); });
-        }
-        info = previously;
-      }
-    });
-  else {
-    info = details.get($);
-    info.i = index();
-  }
-  if (info.counter.length)
-    info.handleEvent({type: DISCONNECTED});
-  const node = fn($).valueOf(false);
-  const {effect, mutation} = info.i;
-  if (mutation)
-    info.mutation.forEach(fn => fn());
-  if (effect) {
-    if (init) {
-      const target = node.nodeType === 1 ? node : find(node);
-      observe(target);
-      target.addEventListener(CONNECTED, info);
-      target.addEventListener(DISCONNECTED, info);
-    } else {
-      clear(info.timer);
-      info.timer = request(info.handleEvent.bind(info, {type: CONNECTED}));
-    }
-  }
-  info = previously;
-  return node;
-};
-
-const createReducer = (i, callback, value) => {
-  const {reducer, fn, $} = info;
-  return reducer[i] = [value, action => {
-    value = callback(value, action);
-    reducer[i][0] = value;
-    circus(fn, $, false);
-  }];
-};
-
-const createState = (i, value) => {
-  const {state, fn, $} = info;
-  return state[i] = [value, value => {
-    state[i][0] = value;
-    circus(fn, $, false);
-  }];
-};
+let id = 0;
 
 const find = node => {
   const {childNodes} = node;
   const {length} = childNodes;
-  for (let i = 0; i < length; i++) {
-    const child = childNodes[i];
+  let i = 0;
+  while (i < length) {
+    const child = childNodes[i++];
     if (child.nodeType === 1)
       return child;
   }
   throw 'unobservable';
 };
 
-const lazyWire = type => {
-  return (...args) => {
-    const hyper = (info[type] || (info[type] = wire(info.$, type)));
-    return hyper(...args);
-  };
+const observer = ($, wire) => {
+  const node = wire.wireType === 1 ? wire : find(wire);
+  observe(node);
+  const handler = {connected, disconnected, handleEvent, $, _: null};
+  node.addEventListener('connected', handler);
+  node.addEventListener('disconnected', handler);
 };
 
-const index = () => ({
-  effect: 0,
-  mutation: 0,
-  reducer: 0,
-  ref: 0,
-  state: 0,
+// every html`...` and svg`...` will be unrolled after
+const unroll = (dom, ref, template) => {
+  const {$, _} = template;
+  const {length} = _;
+  for (let i = 1; i < length; i++) {
+    const interpolation = _[i];
+    if (interpolation) {
+      if (interpolation instanceof Template)
+        _[i] = unroll(false, ref, interpolation);
+      else if (interpolation instanceof Array)
+        interpolation.forEach(deepUnroll, ref);
+    }
+  }
+  const result = wire(ref, $ + ':' + id++).apply(null, _);
+  return dom && !('ELEMENT_NODE' in result) ?
+    result.valueOf(!result.first.parentNode) :
+    result;
+};
+
+const useEffect = (fn, inputs) => {
+  const args = [fn];
+  if (inputs)
+    // if the inputs is an empty array
+    // observe the returned wire for connect/disconnect events
+    // and invoke effects/cleanup on these events only
+    args.push(inputs.length ? inputs : observer);
+  return effect.apply(null, args);
+};
+
+export default fn => augmentor(function ref() {
+  const prev = id;
+  id = 0;
+  try {
+    return unroll(true, ref, fn.apply(this, arguments));
+  }
+  catch (o_O) {
+    console.error(o_O);
+  }
+  finally {
+    id = prev;
+  }
 });
 
-// exports
-const neverland = fn => ($ = {}) => circus(fn, $, true);
+export function html() {
+  return new Template('html', arguments);
+}
 
-const html = lazyWire('html');
+export function svg() {
+  return new Template('svg', arguments);
+}
 
-const svg = lazyWire('svg');
-
-const useEffect = callback => {
-  const i = info.i.effect++;
-  return info.effect[i] || (info.effect[i] = callback);
-};
-
-const useMutationEffect = callback => {
-  const i = info.i.mutation++;
-  return info.mutation[i] || (info.mutation[i] = callback);
-};
-
-const useReducer = (callback, value) => {
-  const i = info.i.reducer++;
-  return info.reducer[i] || createReducer(i, callback, value);
-};
-
-const useRef = value => {
-  const i = info.i.ref++;
-  return info.ref[i] || (info.ref[i] = {current: value});
-};
-
-const useState = value => {
-  const i = info.i.state++;
-  return info.state[i] || createState(i, value);
-};
-
-export default neverland;
 export {
-  Component, bind, define, observe, wire,
-  neverland, html, svg,
-  useEffect, useMutationEffect, useReducer, useRef, useState
+  // from hyperHTML
+  Component,
+  bind,
+  define,
+  observe,
+  wire,
+
+  // from augmentor (with overwritten useEffect)
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState
 };
+
+// the mighty Template class \o/
+function Template($, _) {
+  this.$ = $;
+  this._ = _;
+}
+
+function deepUnroll(value, i, array) {
+  if (value instanceof Template)
+    array[i] = unroll(false, this, value);
+}
+
+// handlers methods
+function connected() {
+  disconnected.call(this);
+  this._ = this.$();
+}
+
+function disconnected() {
+  const {_} = this;
+  this._ = null;
+  if (_)
+    _();
+}
+
+function handleEvent(e) {
+  this[e.type]();
+}
