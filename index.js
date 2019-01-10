@@ -2097,7 +2097,7 @@ var neverland = (function (exports) {
   };
 
   var observer = function observer($, wire$$1) {
-    var node = wire$$1.wireType === 1 ? wire$$1 : find$1(wire$$1);
+    var node = wire$$1.nodeType === 1 ? wire$$1 : find$1(wire$$1);
     observe(node);
     var handler = {
       connected: connected,
@@ -2125,7 +2125,7 @@ var neverland = (function (exports) {
     }
 
     var result = wire(ref$$1, $ + ':' + id$6++).apply(null, _);
-    return dom && !('ELEMENT_NODE' in result) ? result.valueOf(!result.first.parentNode) : result;
+    return dom && !('nodeType' in result) ? result.valueOf(!result.first.parentNode) : result;
   };
 
   var useEffect$1 = function useEffect$$1(fn, inputs) {

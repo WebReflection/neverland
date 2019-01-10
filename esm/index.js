@@ -31,7 +31,7 @@ const find = node => {
 };
 
 const observer = ($, wire) => {
-  const node = wire.wireType === 1 ? wire : find(wire);
+  const node = wire.nodeType === 1 ? wire : find(wire);
   observe(node);
   const handler = {connected, disconnected, handleEvent, $, _: null};
   node.addEventListener('connected', handler);
@@ -52,7 +52,7 @@ const unroll = (dom, ref, template) => {
     }
   }
   const result = wire(ref, $ + ':' + id++).apply(null, _);
-  return dom && !('ELEMENT_NODE' in result) ?
+  return dom && !('nodeType' in result) ?
     result.valueOf(!result.first.parentNode) :
     result;
 };
