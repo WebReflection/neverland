@@ -25,7 +25,7 @@
   "license": "ISC",
   "dependencies": {
     "augmentor": "0.0.4",
-    "hyperhtml": "^2.23.1"
+    "hyperhtml": "^2.24.0"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",
