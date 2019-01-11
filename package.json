@@ -24,8 +24,11 @@
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "dependencies": {
+    "@ungap/custom-event": "^0.2.0",
+    "@ungap/weakset": "^0.1.5",
     "augmentor": "0.0.4",
-    "hyperhtml": "^2.24.0"
+    "disconnected": "^0.1.6",
+    "lighterhtml": "^0.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",
