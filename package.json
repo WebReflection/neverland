@@ -24,16 +24,13 @@
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "dependencies": {
-    "@ungap/custom-event": "^0.2.0",
-    "@ungap/weakset": "^0.1.5",
-    "augmentor": "0.0.4",
-    "disconnected": "^0.1.6",
-    "lighterhtml": "^0.1.4"
+    "dom-augmentor": "^0.1.2",
+    "lighterhtml": "^0.1.13"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",
     "@babel/preset-env": "^7.1.0",
-    "ascjs": "^2.5.1",
+    "ascjs": "^3.0.0",
     "drop-babel-typeof": "^1.0.1",
     "http-server": "^0.11.1",
     "nightmare": "^3.0.1",

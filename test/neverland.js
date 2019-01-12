@@ -279,7 +279,7 @@ var neverland = (function (exports) {
 
   var id$3 = uid();
   setup.push(stacked(id$3));
-  var ref = (function (value) {
+  var useRef = (function (value) {
     var _unstacked = unstacked(id$3),
         i = _unstacked.i,
         stack = _unstacked.stack,
@@ -451,52 +451,69 @@ var neverland = (function (exports) {
     }
   }
 
-  /*! (c) Andrea Giammarchi - ISC */
-  var Wire = function (slice, proto) {
-    proto = Wire.prototype;
+  var find = function find(node) {
+    var childNodes = node.childNodes;
+    var length = childNodes.length;
+    var i = 0;
 
-    proto.remove = function (keepFirst) {
-      var childNodes = this.childNodes;
-      var first = this.firstChild;
-      var last = this.lastChild;
-      this._ = null;
-
-      if (keepFirst && childNodes.length === 2) {
-        last.parentNode.removeChild(last);
-      } else {
-        var range = this.ownerDocument.createRange();
-        range.setStartBefore(keepFirst ? childNodes[1] : first);
-        range.setEndAfter(last);
-        range.deleteContents();
-      }
-
-      return first;
-    };
-
-    proto.valueOf = function (forceAppend) {
-      var fragment = this._;
-      var noFragment = fragment == null;
-      if (noFragment) fragment = this._ = this.ownerDocument.createDocumentFragment();
-
-      if (noFragment || forceAppend) {
-        for (var n = this.childNodes, i = 0, l = n.length; i < l; i++) {
-          fragment.appendChild(n[i]);
-        }
-      }
-
-      return fragment;
-    };
-
-    return Wire;
-
-    function Wire(childNodes) {
-      var nodes = this.childNodes = slice.call(childNodes, 0);
-      this.firstChild = nodes[0];
-      this.lastChild = nodes[nodes.length - 1];
-      this.ownerDocument = nodes[0].ownerDocument;
-      this._ = null;
+    while (i < length) {
+      var child = childNodes[i++];
+      if (child.nodeType === 1) return child;
     }
-  }([].slice);
+
+    throw 'unobservable';
+  };
+
+  var observe = disconnected({
+    Event: CustomEvent$1,
+    WeakSet: WeakSet$1
+  });
+
+  var observer = function observer($, element) {
+    var nodeType = element.nodeType;
+
+    if (nodeType) {
+      var node = nodeType === 1 ? element : find(element);
+      observe(node);
+      var handler = {
+        handleEvent: handleEvent,
+        onconnected: onconnected,
+        ondisconnected: ondisconnected,
+        $: $,
+        _: null
+      };
+      node.addEventListener('connected', handler, false);
+      node.addEventListener('disconnected', handler, false);
+    } else {
+      var value = element.valueOf(); // give a chance to facades to return a reasonable value
+
+      if (value !== element) observer($, value);
+    }
+  };
+
+  var useEffect$1 = function useEffect$$1(fn, inputs) {
+    var args = [fn];
+    if (inputs) // if the inputs is an empty array
+      // observe the returned element for connect/disconnect events
+      // and invoke effects/cleanup on these events only
+      args.push(inputs.length ? inputs : observer);
+    return useEffect.apply(null, args);
+  };
+
+  function handleEvent(e) {
+    this['on' + e.type]();
+  }
+
+  function onconnected() {
+    ondisconnected.call(this);
+    this._ = this.$();
+  }
+
+  function ondisconnected() {
+    var _ = this._;
+    this._ = null;
+    if (_) _();
+  }
 
   /*! (c) Andrea Giammarchi - ISC */
   var templateLiteral = function () {
@@ -544,6 +561,58 @@ var neverland = (function (exports) {
 
     return args;
   }
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var Wire = function (slice, proto) {
+    proto = Wire.prototype;
+    proto.ELEMENT_NODE = 1;
+    proto.nodeType = 111;
+
+    proto.remove = function (keepFirst) {
+      var childNodes = this.childNodes;
+      var first = this.firstChild;
+      var last = this.lastChild;
+      this._ = null;
+
+      if (keepFirst && childNodes.length === 2) {
+        last.parentNode.removeChild(last);
+      } else {
+        var range = this.ownerDocument.createRange();
+        range.setStartBefore(keepFirst ? childNodes[1] : first);
+        range.setEndAfter(last);
+        range.deleteContents();
+      }
+
+      return first;
+    };
+
+    proto.valueOf = function (forceAppend) {
+      var fragment = this._;
+      var noFragment = fragment == null;
+      if (noFragment) fragment = this._ = this.ownerDocument.createDocumentFragment();
+
+      if (noFragment || forceAppend) {
+        for (var n = this.childNodes, i = 0, l = n.length; i < l; i++) {
+          fragment.appendChild(n[i]);
+        }
+      }
+
+      return fragment;
+    };
+
+    return Wire;
+
+    function Wire(childNodes) {
+      var nodes = this.childNodes = slice.call(childNodes, 0);
+      this.firstChild = nodes[0];
+      this.lastChild = nodes[nodes.length - 1];
+      this.ownerDocument = nodes[0].ownerDocument;
+      this._ = null;
+    }
+  }([].slice);
+
+  var isArray = Array.isArray;
+  var wireType = Wire.prototype.nodeType;
 
   /*! (c) Andrea Giammarchi - ISC */
   var createContent = function (document) {
@@ -1145,7 +1214,7 @@ var neverland = (function (exports) {
     };
   }
 
-  function find(node, path) {
+  function find$1(node, path) {
     var length = path.length;
     var i = 0;
 
@@ -1291,7 +1360,7 @@ var neverland = (function (exports) {
 
         while (i < len) {
           var info = holes[i++];
-          var node = find(content, info.path);
+          var node = find$1(content, info.path);
 
           switch (info.type) {
             case 'any':
@@ -1450,12 +1519,12 @@ var neverland = (function (exports) {
   var OWNER_SVG_ELEMENT = 'ownerSVGElement'; // returns nodes from wires and components
 
   var asNode = function asNode(item, i) {
-    return item.constructor === Wire ? 1 / i < 0 ? i ? item.remove(true) : item.lastChild : i ? item.valueOf(true) : item.firstChild : item;
+    return item.nodeType === wireType ? 1 / i < 0 ? i ? item.remove(true) : item.lastChild : i ? item.valueOf(true) : item.firstChild : item;
   }; // returns true if domdiff can handle the value
 
 
   var canDiff = function canDiff(value) {
-    return value.constructor === Wire || 'ELEMENT_NODE' in value;
+    return 'ELEMENT_NODE' in value;
   }; // generic attributes helpers
 
 
@@ -1517,10 +1586,8 @@ var neverland = (function (exports) {
         }
       }
     };
-  }; // checks inside any content
+  }; // list of attributes that should not be directly assigned
 
-
-  var isArray = Array.isArray; // list of attributes that should not be directly assigned
 
   var readOnly = /^(?:form|list)$/i; // reused every slice time
 
@@ -1690,35 +1757,55 @@ var neverland = (function (exports) {
     }
   };
 
-  var isArray$1 = Array.isArray;
   var wm = new WeakMap();
-  var current$1 = null;
+  var templateType = 0;
+  var current$1 = null; // can be used with any useRef hook
+  // returns an `html` and `svg` function
+
+  var hook = function hook(useRef) {
+    return {
+      html: craeteHook(useRef, html),
+      svg: craeteHook(useRef, svg)
+    };
+  }; // generic render
+
   function render(node, callback) {
-    var prev = current$1;
-    current$1 = wm.get(node) || set$2(node); // TODO: perf measurement about guarding this via try/catch/finally
-
-    var result = callback();
-    var template = result._[0];
-    var diff = current$1.template !== template;
-    if (diff && current$1.template) current$1.stack.splice(0);
-    current$1.i = 0;
-    var dom = unroll(result);
-
-    if (diff) {
-      current$1.template = template;
-      node.textContent = '';
-      node.appendChild(dom.valueOf(true));
-    }
-
-    current$1 = prev;
+    var content = update(node, callback);
+    if (content !== null) appendClean(node, content);
     return node;
   }
   var html = outer$1('html');
   var svg = outer$1('svg');
 
-  function Template($, _) {
-    this.$ = $;
-    this._ = _;
+  function appendClean(node, fragment) {
+    node.textContent = '';
+    node.appendChild(fragment);
+  }
+
+  function asNode$1(result) {
+    return result.nodeType === wireType ? result.valueOf(true) : result;
+  }
+
+  function craeteHook(useRef, view) {
+    return function () {
+      var ref = useRef(null);
+      if (ref.current === null) ref.current = content.bind(ref);
+      return ref.current.apply(null, arguments);
+    };
+
+    function content() {
+      var args = [];
+
+      for (var i = 0, length = arguments.length; i < length; i++) {
+        args[i] = arguments[i];
+      }
+
+      var content = update(this, function () {
+        return view.apply(null, args);
+      });
+      if (content) this.content = content;
+      return this.content;
+    }
   }
 
   function getWire(type, args) {
@@ -1765,6 +1852,37 @@ var neverland = (function (exports) {
     return info;
   }
 
+  function setTemplate(template) {
+    if (current$1.template) current$1.stack.splice(0);
+    current$1.template = template;
+  }
+
+  function update(reference, callback) {
+    var prev = current$1;
+    current$1 = wm.get(reference) || set$2(reference);
+    current$1.i = 0; // TODO: perf measurement about guarding this
+
+    var result = callback();
+    var ret = null;
+
+    if (result.nodeType === templateType) {
+      var template = result._[0]; // TODO: perf measurement about guarding this
+
+      var content = unroll(result);
+
+      if (current$1.template !== template) {
+        setTemplate(template);
+        ret = asNode$1(content);
+      }
+    } else {
+      setTemplate(null);
+      ret = asNode$1(result);
+    }
+
+    current$1 = prev;
+    return ret;
+  }
+
   function unroll(template) {
     var $ = template.$,
         _ = template._;
@@ -1779,7 +1897,7 @@ var neverland = (function (exports) {
 
   function unrollDeep(value, i, array) {
     if (value) {
-      if (value.constructor === Template) array[i] = unroll(value);else if (isArray$1(value)) value.forEach(unrollDeep);
+      if (value.nodeType === 0) array[i] = unroll(value);else if (isArray(value)) value.forEach(unrollDeep);
     }
   }
 
@@ -1789,90 +1907,36 @@ var neverland = (function (exports) {
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
   }
 
-  var find$1 = function find(node) {
-    var childNodes = node.childNodes;
-    var length = childNodes.length;
-    var i = 0;
+  function Template($, _) {
+    this.$ = $;
+    this._ = _;
+  }
 
-    while (i < length) {
-      var child = childNodes[i++];
-      if (child.nodeType === 1) return child;
-    }
+  var TP = Template.prototype;
+  TP.nodeType = templateType;
 
-    throw 'unobservable';
+  TP.valueOf = function () {
+    return unroll(this);
   };
 
-  var observe = disconnected({
-    Event: CustomEvent$1,
-    WeakSet: WeakSet$1
-  });
-
-  var observer = function observer($, wire) {
-    var node = wire.nodeType === 1 ? wire : find$1(wire);
-    observe(node);
-    var handler = {
-      handleEvent: handleEvent,
-      onconnected: onconnected,
-      ondisconnected: ondisconnected,
-      $: $,
-      _: null
-    };
-    node.addEventListener('connected', handler);
-    node.addEventListener('disconnected', handler);
-  };
-
-  var useEffect$1 = function useEffect$$1(fn, inputs) {
-    var args = [fn];
-    if (inputs) // if the inputs is an empty array
-      // observe the returned wire for connect/disconnect events
-      // and invoke effects/cleanup on these events only
-      args.push(inputs.length ? inputs : observer);
-    return useEffect.apply(null, args);
-  };
+  var _hook = hook(useRef),
+      html$1 = _hook.html,
+      svg$1 = _hook.svg;
 
   var index = (function (fn) {
-    var wrap = {
-      appendChild: appendChild,
-      fragment: null,
-      textContent: ''
-    };
-    return augmentor(function () {
-      var args = [this];
-      args.push.apply(args, arguments);
-      return render(wrap, fn.bind.apply(fn, args)).fragment;
-    });
+    return augmentor(fn);
   });
-
-  function appendChild(fragment) {
-    this.fragment = fragment;
-  } // handlers methods
-
-
-  function handleEvent(e) {
-    this['on' + e.type]();
-  }
-
-  function onconnected() {
-    ondisconnected.call(this);
-    this._ = this.$();
-  }
-
-  function ondisconnected() {
-    var _ = this._;
-    this._ = null;
-    if (_) _();
-  }
 
   exports.default = index;
   exports.render = render;
-  exports.html = html;
-  exports.svg = svg;
+  exports.html = html$1;
+  exports.svg = svg$1;
   exports.useCallback = callback;
   exports.useEffect = useEffect$1;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;
   exports.useReducer = useReducer;
-  exports.useRef = ref;
+  exports.useRef = useRef;
   exports.useState = state;
 
   return exports;
