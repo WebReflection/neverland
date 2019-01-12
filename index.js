@@ -1690,7 +1690,7 @@ var neverland = (function (exports) {
                   case 'number':
                   case 'boolean':
                     anyContent({
-                      html: value
+                      text: value
                     });
                     break;
 
