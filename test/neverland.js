@@ -5,54 +5,18 @@ var neverland = (function (exports) {
   var self = null ||
   /* istanbul ignore next */
   {};
+  self.CustomEvent = typeof CustomEvent === 'function' ? CustomEvent : function (__p__) {
+    CustomEvent[__p__] = new CustomEvent('').constructor[__p__];
+    return CustomEvent;
 
-  try {
-    self.WeakMap = WeakMap;
-  } catch (WeakMap) {
-    // this could be better but 90% of the time
-    // it's everything developers need as fallback
-    self.WeakMap = function (id, Object) {
-
-      var dP = Object.defineProperty;
-      var hOP = Object.hasOwnProperty;
-      var proto = WeakMap.prototype;
-
-      proto.delete = function (key) {
-        return this.has(key) && delete key[this._];
-      };
-
-      proto.get = function (key) {
-        return this.has(key) ? key[this._] : void 0;
-      };
-
-      proto.has = function (key) {
-        return hOP.call(key, this._);
-      };
-
-      proto.set = function (key, value) {
-        dP(key, this._, {
-          configurable: true,
-          value: value
-        });
-        return this;
-      };
-
-      return WeakMap;
-
-      function WeakMap(iterable) {
-        dP(this, '_', {
-          value: '_@ungap/weakmap' + id++
-        });
-        if (iterable) iterable.forEach(add, this);
-      }
-
-      function add(pair) {
-        this.set(pair[0], pair[1]);
-      }
-    }(Math.random(), Object);
-  }
-
-  var WeakMap$1 = self.WeakMap;
+    function CustomEvent(type, init) {
+      if (!init) init = {};
+      var e = document.createEvent('CustomEvent');
+      e.initCustomEvent(type, !!init.bubbles, !!init.cancelable, init.detail);
+      return e;
+    }
+  }('prototype');
+  var CustomEvent$1 = self.CustomEvent;
 
   /*! (c) Andrea Giammarchi - ISC */
   var self$1 = null ||
@@ -62,37 +26,648 @@ var neverland = (function (exports) {
   try {
     self$1.WeakSet = WeakSet;
   } catch (WeakSet) {
-    (function (id, dP) {
+    // requires a global WeakMap (IE11+)
+    (function (WeakMap) {
+      var all = new WeakMap();
       var proto = WeakSet.prototype;
 
-      proto.add = function (object) {
-        if (!this.has(object)) dP(object, this._, {
-          value: true,
-          configurable: true
-        });
-        return this;
+      proto.add = function (value) {
+        return all.get(this).set(value, 1), this;
       };
 
-      proto.has = function (object) {
-        return this.hasOwnProperty.call(object, this._);
+      proto.delete = function (value) {
+        return all.get(this).delete(value);
       };
 
-      proto.delete = function (object) {
-        return this.has(object) && delete object[this._];
+      proto.has = function (value) {
+        return all.get(this).has(value);
       };
 
       self$1.WeakSet = WeakSet;
 
-      function WeakSet() {
+      function WeakSet(iterable) {
 
-        dP(this, '_', {
-          value: '_@ungap/weakmap' + id++
-        });
+        all.set(this, new WeakMap());
+        if (iterable) iterable.forEach(this.add, this);
       }
-    })(Math.random(), Object.defineProperty);
+    })(WeakMap);
   }
 
   var WeakSet$1 = self$1.WeakSet;
+
+  
+
+  var now = null;
+  var current = function current() {
+    return now;
+  };
+  var empty = [];
+  var setup = [];
+  var $ = function $(value) {
+    return typeof(value) === typeof($) ? value() : value;
+  };
+  var diff = function diff(a, b) {
+    return a.length !== b.length || a.some(diverse, b);
+  };
+  var stacked = function stacked(id) {
+    return function (runner) {
+      var state = {
+        i: 0,
+        stack: []
+      };
+      runner[id] = state;
+      runner.before.push(function () {
+        state.i = 0;
+      });
+    };
+  };
+  var id$1 = 0;
+  var uid = function uid() {
+    return '_$' + id$1++;
+  };
+  var unstacked = function unstacked(id) {
+    var _now = now,
+        state = _now[id],
+        update = _now.update;
+    var i = state.i,
+        stack = state.stack;
+    state.i++;
+    return {
+      i: i,
+      stack: stack,
+      update: update,
+      unknown: i === stack.length
+    };
+  };
+  var augmentor = (function (fn) {
+    var current = runner($);
+    each(setup, current);
+
+    $.reset = function () {
+      each(current.reset, current);
+
+      for (var key in current) {
+        if (/^_\$/.test(key)) current[key].stack.splice(0);
+      }
+    };
+
+    return $;
+
+    function $() {
+      var prev = now;
+      now = current;
+      var result;
+
+      try {
+        var _ = current._,
+            before = current.before,
+            after = current.after,
+            external = current.external;
+        each(before, current);
+        result = fn.apply(_.c = this, _.a = arguments);
+        each(after, current);
+        if (external.length) each(external.splice(0), result);
+      } catch (o_O) {
+        console.error(o_O);
+      }
+
+      now = prev;
+      return result;
+    }
+  });
+
+  var each = function each(arr, value) {
+    var length = arr.length;
+    var i = 0;
+
+    while (i < length) {
+      arr[i++](value);
+    }
+  };
+
+  var runner = function runner($) {
+    var _ = {
+      c: null,
+      a: null
+    };
+    return {
+      _: _,
+      before: [],
+      after: [],
+      external: [],
+      reset: [],
+      update: function update() {
+        return $.apply(_.c, _.a);
+      }
+    };
+  };
+
+  function diverse(value, i) {
+    return value !== this[i];
+  }
+
+  var id$2 = uid();
+  var cancel, request;
+
+  try {
+    cancel = cancelAnimationFrame;
+    request = requestAnimationFrame;
+  } catch (o_O) {
+    // i.e. if you run this in NodeJS
+    cancel = clearTimeout;
+    request = setTimeout;
+  }
+
+  var create = function create(always, check, inputs, raf, fn) {
+    return {
+      always: always,
+      check: check,
+      inputs: inputs,
+      raf: raf,
+      fn: fn,
+      clean: null,
+      t: 0,
+      update: check
+    };
+  };
+
+  var effect = function effect(raf) {
+    return function (callback, refs) {
+      var _unstacked = unstacked(id$2),
+          i = _unstacked.i,
+          stack = _unstacked.stack,
+          unknown = _unstacked.unknown;
+
+      var comp = refs || empty;
+
+      if (unknown) {
+        var always = comp === empty;
+
+        var check = always || !raf || typeof(comp) !== typeof(effect);
+
+        if (always || !raf || typeof(comp) !== typeof(effect)) {
+          stack.push(create(always, check, comp, raf, function () {
+            set$1(stack[i], callback());
+          }));
+        } else {
+          current().external.push(function (result) {
+            return refs(callback, result);
+          });
+          stack.push(create(always, always, empty, raf, effect));
+        }
+      } else {
+        var info = stack[i];
+        var _check = info.check,
+            _always = info.always,
+            inputs = info.inputs;
+
+        if (_check && (_always || diff(inputs, comp))) {
+          info.inputs = comp;
+          info.update = true;
+        }
+      }
+    };
+  };
+
+  var set$1 = function set(info, clean) {
+    info.t = 0;
+    info.clean = clean;
+  };
+
+  setup.push(function (runner) {
+    var stack = [];
+    var state = {
+      i: 0,
+      stack: stack
+    };
+    runner[id$2] = state;
+
+    var reset = function reset() {
+      state.i = 0;
+
+      for (var length = stack.length, i = 0; i < length; i++) {
+        var _stack$i = stack[i],
+            check = _stack$i.check,
+            clean = _stack$i.clean,
+            raf = _stack$i.raf,
+            t = _stack$i.t;
+
+        if (check) {
+          if (raf && t) cancel(t);else if (clean) clean();
+          set$1(stack[i], null);
+        }
+      }
+    };
+
+    runner.reset.push(reset);
+    runner.before.push(reset);
+    runner.after.push(function () {
+      for (var length = stack.length, i = 0; i < length; i++) {
+        var _stack$i2 = stack[i],
+            fn = _stack$i2.fn,
+            raf = _stack$i2.raf,
+            update = _stack$i2.update;
+
+        if (update) {
+          if (raf) stack[i].t = request(fn);else stack[i].clean = fn();
+        }
+      }
+    });
+  });
+  var useEffect = effect(true);
+  var useLayoutEffect = effect(false);
+
+  var id$3 = uid();
+  setup.push(stacked(id$3));
+  var useRef = (function (value) {
+    var _unstacked = unstacked(id$3),
+        i = _unstacked.i,
+        stack = _unstacked.stack,
+        unknown = _unstacked.unknown;
+
+    if (unknown) stack.push({
+      current: $(value)
+    });
+    return stack[i];
+  });
+
+  var id$4 = uid();
+  setup.push(stacked(id$4));
+  var useReducer = (function (reducer, value) {
+    var _unstacked = unstacked(id$4),
+        i = _unstacked.i,
+        stack = _unstacked.stack,
+        unknown = _unstacked.unknown,
+        update = _unstacked.update;
+
+    if (unknown) stack.push([$(value), function (action) {
+      value = reducer(value, action);
+      pair[0] = value;
+      update();
+    }]);
+    var pair = stack[i];
+    return pair;
+  });
+
+  var state = (function (value) {
+    return useReducer(function (_, value) {
+      return value;
+    }, value);
+  });
+
+  var id$5 = uid();
+  setup.push(stacked(id$5));
+  var useMemo = (function (callback, refs) {
+    var _unstacked = unstacked(id$5),
+        i = _unstacked.i,
+        stack = _unstacked.stack,
+        unknown = _unstacked.unknown;
+
+    var comp = refs || empty;
+    if (unknown) stack.push(create$1(callback, comp));
+    var _stack$i = stack[i],
+        filter = _stack$i.filter,
+        value = _stack$i.value,
+        fn = _stack$i.fn,
+        inputs = _stack$i.inputs;
+    return (filter ? diff(inputs, comp) : callback !== fn) ? (stack[i] = create$1(callback, comp)).value : value;
+  });
+
+  var create$1 = function create(fn, inputs) {
+    return {
+      filter: inputs !== empty,
+      value: fn(),
+      fn: fn,
+      inputs: inputs
+    };
+  };
+
+  var callback = (function (fn, inputs) {
+    return useMemo(function () {
+      return fn;
+    }, inputs);
+  });
+
+  /*! (c) Andrea Giammarchi */
+  function disconnected(poly) {
+
+    var CONNECTED = 'connected';
+    var DISCONNECTED = 'dis' + CONNECTED;
+    var Event = poly.Event;
+    var WeakSet = poly.WeakSet;
+    var notObserving = true;
+    var observer = new WeakSet();
+    return function observe(node) {
+      if (notObserving) {
+        notObserving = !notObserving;
+        startObserving(node.ownerDocument);
+      }
+
+      observer.add(node);
+      return node;
+    };
+
+    function startObserving(document) {
+      var dispatched = null;
+
+      try {
+        new MutationObserver(changes).observe(document, {
+          subtree: true,
+          childList: true
+        });
+      } catch (o_O) {
+        var timer = 0;
+        var records = [];
+
+        var reschedule = function reschedule(record) {
+          records.push(record);
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            changes(records.splice(timer = 0, records.length));
+          }, 0);
+        };
+
+        document.addEventListener('DOMNodeRemoved', function (event) {
+          reschedule({
+            addedNodes: [],
+            removedNodes: [event.target]
+          });
+        }, true);
+        document.addEventListener('DOMNodeInserted', function (event) {
+          reschedule({
+            addedNodes: [event.target],
+            removedNodes: []
+          });
+        }, true);
+      }
+
+      function changes(records) {
+        dispatched = new Tracker();
+
+        for (var record, length = records.length, i = 0; i < length; i++) {
+          record = records[i];
+          dispatchAll(record.removedNodes, DISCONNECTED, CONNECTED);
+          dispatchAll(record.addedNodes, CONNECTED, DISCONNECTED);
+        }
+
+        dispatched = null;
+      }
+
+      function dispatchAll(nodes, type, counter) {
+        for (var node, event = new Event(type), length = nodes.length, i = 0; i < length; (node = nodes[i++]).nodeType === 1 && dispatchTarget(node, event, type, counter)) {
+        }
+      }
+
+      function dispatchTarget(node, event, type, counter) {
+        if (observer.has(node) && !dispatched[type].has(node)) {
+          dispatched[counter].delete(node);
+          dispatched[type].add(node);
+          node.dispatchEvent(event);
+          /*
+          // The event is not bubbling (perf reason: should it?),
+          // hence there's no way to know if
+          // stop/Immediate/Propagation() was called.
+          // Should DOM Level 0 work at all?
+          // I say it's a YAGNI case for the time being,
+          // and easy to implement in user-land.
+          if (!event.cancelBubble) {
+            var fn = node['on' + type];
+            if (fn)
+              fn.call(node, event);
+          }
+          */
+        }
+
+        for (var // apparently is node.children || IE11 ... ^_^;;
+        // https://github.com/WebReflection/disconnected/issues/1
+        children = node.children || [], length = children.length, i = 0; i < length; dispatchTarget(children[i++], event, type, counter)) {
+        }
+      }
+
+      function Tracker() {
+        this[CONNECTED] = new WeakSet();
+        this[DISCONNECTED] = new WeakSet();
+      }
+    }
+  }
+
+  var find = function find(node) {
+    var childNodes = node.childNodes;
+    var length = childNodes.length;
+    var i = 0;
+
+    while (i < length) {
+      var child = childNodes[i++];
+      if (child.nodeType === 1) return child;
+    }
+
+    throw 'unobservable';
+  };
+
+  var observe = disconnected({
+    Event: CustomEvent$1,
+    WeakSet: WeakSet$1
+  });
+
+  var observer = function observer($, element) {
+    var nodeType = element.nodeType;
+
+    if (nodeType) {
+      var node = nodeType === 1 ? element : find(element);
+      observe(node);
+      var handler = {
+        handleEvent: handleEvent,
+        onconnected: onconnected,
+        ondisconnected: ondisconnected,
+        $: $,
+        _: null
+      };
+      node.addEventListener('connected', handler, false);
+      node.addEventListener('disconnected', handler, false);
+    } else {
+      var value = element.valueOf(); // give a chance to facades to return a reasonable value
+
+      if (value !== element) observer($, value);
+    }
+  };
+
+  var useEffect$1 = function useEffect$$1(fn, inputs) {
+    var args = [fn];
+    if (inputs) // if the inputs is an empty array
+      // observe the returned element for connect/disconnect events
+      // and invoke effects/cleanup on these events only
+      args.push(inputs.length ? inputs : observer);
+    return useEffect.apply(null, args);
+  };
+
+  function handleEvent(e) {
+    this['on' + e.type]();
+  }
+
+  function onconnected() {
+    ondisconnected.call(this);
+    this._ = this.$();
+  }
+
+  function ondisconnected() {
+    var _ = this._;
+    this._ = null;
+    if (_) _();
+  }
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var templateLiteral = function () {
+
+    var RAW = 'raw';
+    var isNoOp = (typeof document === "undefined" ? "undefined" : typeof(document)) !== 'object';
+
+    var _templateLiteral = function templateLiteral(tl) {
+      if ( // for badly transpiled literals
+      !(RAW in tl) || // for some version of TypeScript
+      tl.propertyIsEnumerable(RAW) || // and some other version of TypeScript
+      !Object.isFrozen(tl[RAW]) || // or for Firefox < 55
+      /Firefox\/(\d+)/.test((document.defaultView.navigator || {}).userAgent) && parseFloat(RegExp.$1) < 55) {
+        var forever = {};
+
+        _templateLiteral = function templateLiteral(tl) {
+          for (var key = '.', i = 0; i < tl.length; i++) {
+            key += tl[i].length + '.' + tl[i];
+          }
+
+          return forever[key] || (forever[key] = tl);
+        };
+      } else {
+        isNoOp = true;
+      }
+
+      return TL(tl);
+    };
+
+    return TL;
+
+    function TL(tl) {
+      return isNoOp ? tl : _templateLiteral(tl);
+    }
+  }();
+
+  function tta (template) {
+    var length = arguments.length;
+    var args = [templateLiteral(template)];
+    var i = 1;
+
+    while (i < length) {
+      args.push(arguments[i++]);
+    }
+
+    return args;
+  }
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var Wire = function (slice, proto) {
+    proto = Wire.prototype;
+    proto.ELEMENT_NODE = 1;
+    proto.nodeType = 111;
+
+    proto.remove = function (keepFirst) {
+      var childNodes = this.childNodes;
+      var first = this.firstChild;
+      var last = this.lastChild;
+      this._ = null;
+
+      if (keepFirst && childNodes.length === 2) {
+        last.parentNode.removeChild(last);
+      } else {
+        var range = this.ownerDocument.createRange();
+        range.setStartBefore(keepFirst ? childNodes[1] : first);
+        range.setEndAfter(last);
+        range.deleteContents();
+      }
+
+      return first;
+    };
+
+    proto.valueOf = function (forceAppend) {
+      var fragment = this._;
+      var noFragment = fragment == null;
+      if (noFragment) fragment = this._ = this.ownerDocument.createDocumentFragment();
+
+      if (noFragment || forceAppend) {
+        for (var n = this.childNodes, i = 0, l = n.length; i < l; i++) {
+          fragment.appendChild(n[i]);
+        }
+      }
+
+      return fragment;
+    };
+
+    return Wire;
+
+    function Wire(childNodes) {
+      var nodes = this.childNodes = slice.call(childNodes, 0);
+      this.firstChild = nodes[0];
+      this.lastChild = nodes[nodes.length - 1];
+      this.ownerDocument = nodes[0].ownerDocument;
+      this._ = null;
+    }
+  }([].slice);
+
+  var isArray = Array.isArray;
+  var wireType = Wire.prototype.nodeType;
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var createContent = function (document) {
+
+    var FRAGMENT = 'fragment';
+    var TEMPLATE = 'template';
+    var HAS_CONTENT = 'content' in create(TEMPLATE);
+    var createHTML = HAS_CONTENT ? function (html) {
+      var template = create(TEMPLATE);
+      template.innerHTML = html;
+      return template.content;
+    } : function (html) {
+      var content = create(FRAGMENT);
+      var template = create(TEMPLATE);
+      var childNodes = null;
+
+      if (/^[^\S]*?<(col(?:group)?|t(?:head|body|foot|r|d|h))/i.test(html)) {
+        var selector = RegExp.$1;
+        template.innerHTML = '<table>' + html + '</table>';
+        childNodes = template.querySelectorAll(selector);
+      } else {
+        template.innerHTML = html;
+        childNodes = template.childNodes;
+      }
+
+      append(content, childNodes);
+      return content;
+    };
+    return function createContent(markup, type) {
+      return (type === 'svg' ? createSVG : createHTML)(markup);
+    };
+
+    function append(root, childNodes) {
+      var length = childNodes.length;
+
+      while (length--) {
+        root.appendChild(childNodes[0]);
+      }
+    }
+
+    function create(element) {
+      return element === FRAGMENT ? document.createDocumentFragment() : document.createElementNS('http://www.w3.org/1999/xhtml', element);
+    } // it could use createElementNS when hasNode is there
+    // but this fallback is equally fast and easier to maintain
+    // it is also battle tested already in all IE
+
+
+    function createSVG(svg) {
+      var content = create(FRAGMENT);
+      var template = create('div');
+      template.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg">' + svg + '</svg>';
+      append(content, template.firstChild.childNodes);
+      return content;
+    }
+  }(document);
 
   /*! (c) Andrea Giammarchi - ISC */
   var self$2 = null ||
@@ -510,382 +1085,58 @@ var neverland = (function (exports) {
     return futureNodes;
   };
 
-  
-
   /*! (c) Andrea Giammarchi - ISC */
   var self$3 = null ||
   /* istanbul ignore next */
   {};
-  self$3.CustomEvent = typeof CustomEvent === 'function' ? CustomEvent : function (__p__) {
-    CustomEvent[__p__] = new CustomEvent('').constructor[__p__];
-    return CustomEvent;
 
-    function CustomEvent(type, init) {
-      if (!init) init = {};
-      var e = document.createEvent('CustomEvent');
-      e.initCustomEvent(type, !!init.bubbles, !!init.cancelable, init.detail);
-      return e;
-    }
-  }('prototype');
-  var CustomEvent$1 = self$3.CustomEvent;
+  try {
+    self$3.WeakMap = WeakMap;
+  } catch (WeakMap) {
+    // this could be better but 90% of the time
+    // it's everything developers need as fallback
+    self$3.WeakMap = function (id, Object) {
 
-  // able to create Custom Elements like components
-  // including the ability to listen to connect/disconnect
-  // events via onconnect/ondisconnect attributes
-  // Components can be created imperatively or declaratively.
-  // The main difference is that declared components
-  // will not automatically render on setState(...)
-  // to simplify state handling on render.
+      var dP = Object.defineProperty;
+      var hOP = Object.hasOwnProperty;
+      var proto = WeakMap.prototype;
 
-  function Component() {
-    return this; // this is needed in Edge !!!
-  } // Component is lazily setup because it needs
-  // wire mechanism as lazy content
-
-  function setup(content) {
-    // there are various weakly referenced variables in here
-    // and mostly are to use Component.for(...) static method.
-    var children = new WeakMap$1();
-    var create = Object.create;
-
-    var createEntry = function createEntry(wm, id, component) {
-      wm.set(id, component);
-      return component;
-    };
-
-    var get = function get(Class, info, context, id) {
-      var relation = info.get(Class) || relate(Class, info);
-
-      switch (typeof(id)) {
-        case 'object':
-        case 'function':
-          var wm = relation.w || (relation.w = new WeakMap$1());
-          return wm.get(id) || createEntry(wm, id, new Class(context));
-
-        default:
-          var sm = relation.p || (relation.p = create(null));
-          return sm[id] || (sm[id] = new Class(context));
-      }
-    };
-
-    var relate = function relate(Class, info) {
-      var relation = {
-        w: null,
-        p: null
+      proto.delete = function (key) {
+        return this.has(key) && delete key[this._];
       };
-      info.set(Class, relation);
-      return relation;
-    };
 
-    var set = function set(context) {
-      var info = new Map$1();
-      children.set(context, info);
-      return info;
-    }; // The Component Class
+      proto.get = function (key) {
+        return this.has(key) ? key[this._] : void 0;
+      };
 
+      proto.has = function (key) {
+        return hOP.call(key, this._);
+      };
 
-    Object.defineProperties(Component, {
-      // Component.for(context[, id]) is a convenient way
-      // to automatically relate data/context to children components
-      // If not created yet, the new Component(context) is weakly stored
-      // and after that same instance would always be returned.
-      for: {
-        configurable: true,
-        value: function value(context, id) {
-          return get(this, children.get(context) || set(context), context, id == null ? 'default' : id);
-        }
-      }
-    });
-    Object.defineProperties(Component.prototype, {
-      // all events are handled with the component as context
-      handleEvent: {
-        value: function value(e) {
-          var ct = e.currentTarget;
-          this['getAttribute' in ct && ct.getAttribute('data-call') || 'on' + e.type](e);
-        }
-      },
-      // components will lazily define html or svg properties
-      // as soon as these are invoked within the .render() method
-      // Such render() method is not provided by the base class
-      // but it must be available through the Component extend.
-      // Declared components could implement a
-      // render(props) method too and use props as needed.
-      html: lazyGetter('html', content),
-      svg: lazyGetter('svg', content),
-      // the state is a very basic/simple mechanism inspired by Preact
-      state: lazyGetter('state', function () {
-        return this.defaultState;
-      }),
-      // it is possible to define a default state that'd be always an object otherwise
-      defaultState: {
-        get: function get() {
-          return {};
-        }
-      },
-      // dispatch a bubbling, cancelable, custom event
-      // through the first known/available node
-      dispatch: {
-        value: function value(type, detail) {
-          var _wire$ = this._wire$;
-
-          if (_wire$) {
-            var event = new CustomEvent$1(type, {
-              bubbles: true,
-              cancelable: true,
-              detail: detail
-            });
-            event.component = this;
-            return (_wire$.dispatchEvent ? _wire$ : _wire$.childNodes[0]).dispatchEvent(event);
-          }
-
-          return false;
-        }
-      },
-      // setting some property state through a new object
-      // or a callback, triggers also automatically a render
-      // unless explicitly specified to not do so (render === false)
-      setState: {
-        value: function value(state, render) {
-          var target = this.state;
-          var source = typeof state === 'function' ? state.call(this, target) : state;
-
-          for (var key in source) {
-            target[key] = source[key];
-          }
-
-          if (render !== false) this.render();
-          return this;
-        }
-      }
-    });
-  } // instead of a secret key I could've used a WeakMap
-  // However, attaching a property directly will result
-  // into better performance with thousands of components
-  // hanging around, and less memory pressure caused by the WeakMap
-
-  var lazyGetter = function lazyGetter(type, fn) {
-    var secret = '_' + type + '$';
-    return {
-      get: function get() {
-        return this[secret] || setValue(this, secret, fn.call(this, type));
-      },
-      set: function set(value) {
-        setValue(this, secret, value);
-      }
-    };
-  }; // shortcut to set value on get or set(value)
-
-
-  var setValue = function setValue(self, secret, value) {
-    return Object.defineProperty(self, secret, {
-      configurable: true,
-      value: typeof value === 'function' ? function () {
-        return self._wire$ = value.apply(this, arguments);
-      } : value
-    })[secret];
-  };
-
-  var attributes = {};
-  var intents = {};
-  var keys = [];
-  var hasOwnProperty = intents.hasOwnProperty;
-  var length = 0;
-  var Intent = {
-    // used to invoke right away hyper:attributes
-    attributes: attributes,
-    // hyperHTML.define('intent', (object, update) => {...})
-    // can be used to define a third parts update mechanism
-    // when every other known mechanism failed.
-    // hyper.define('user', info => info.name);
-    // hyper(node)`<p>${{user}}</p>`;
-    define: function define(intent, callback) {
-      if (intent.indexOf('-') < 0) {
-        if (!(intent in intents)) {
-          length = keys.push(intent);
-        }
-
-        intents[intent] = callback;
-      } else {
-        attributes[intent] = callback;
-      }
-    },
-    // this method is used internally as last resort
-    // to retrieve a value out of an object
-    invoke: function invoke(object, callback) {
-      for (var i = 0; i < length; i++) {
-        var key = keys[i];
-
-        if (hasOwnProperty.call(object, key)) {
-          return intents[key](object[key], callback);
-        }
-      }
-    }
-  };
-
-  var isArray = Array.isArray || function (toString) {
-    var $ = toString.call([]);
-    return function isArray(object) {
-      return toString.call(object) === $;
-    };
-  }({}.toString);
-
-  /*! (c) Andrea Giammarchi - ISC */
-  var createContent = function (document) {
-
-    var FRAGMENT = 'fragment';
-    var TEMPLATE = 'template';
-    var HAS_CONTENT = 'content' in create(TEMPLATE);
-    var createHTML = HAS_CONTENT ? function (html) {
-      var template = create(TEMPLATE);
-      template.innerHTML = html;
-      return template.content;
-    } : function (html) {
-      var content = create(FRAGMENT);
-      var template = create(TEMPLATE);
-      var childNodes = null;
-
-      if (/^[^\S]*?<(col(?:group)?|t(?:head|body|foot|r|d|h))/i.test(html)) {
-        var selector = RegExp.$1;
-        template.innerHTML = '<table>' + html + '</table>';
-        childNodes = template.querySelectorAll(selector);
-      } else {
-        template.innerHTML = html;
-        childNodes = template.childNodes;
-      }
-
-      append(content, childNodes);
-      return content;
-    };
-    return function createContent(markup, type) {
-      return (type === 'svg' ? createSVG : createHTML)(markup);
-    };
-
-    function append(root, childNodes) {
-      var length = childNodes.length;
-
-      while (length--) {
-        root.appendChild(childNodes[0]);
-      }
-    }
-
-    function create(element) {
-      return element === FRAGMENT ? document.createDocumentFragment() : document.createElementNS('http://www.w3.org/1999/xhtml', element);
-    } // it could use createElementNS when hasNode is there
-    // but this fallback is equally fast and easier to maintain
-    // it is also battle tested already in all IE
-
-
-    function createSVG(svg) {
-      var content = create(FRAGMENT);
-      var template = create('div');
-      template.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg">' + svg + '</svg>';
-      append(content, template.firstChild.childNodes);
-      return content;
-    }
-  }(document);
-
-  /*! (c) Andrea Giammarchi */
-  function disconnected(poly) {
-
-    var CONNECTED = 'connected';
-    var DISCONNECTED = 'dis' + CONNECTED;
-    var Event = poly.Event;
-    var WeakSet = poly.WeakSet;
-    var notObserving = true;
-    var observer = new WeakSet();
-    return function observe(node) {
-      if (notObserving) {
-        notObserving = !notObserving;
-        startObserving(node.ownerDocument);
-      }
-
-      observer.add(node);
-      return node;
-    };
-
-    function startObserving(document) {
-      var dispatched = null;
-
-      try {
-        new MutationObserver(changes).observe(document, {
-          subtree: true,
-          childList: true
+      proto.set = function (key, value) {
+        dP(key, this._, {
+          configurable: true,
+          value: value
         });
-      } catch (o_O) {
-        var timer = 0;
-        var records = [];
+        return this;
+      };
 
-        var reschedule = function reschedule(record) {
-          records.push(record);
-          clearTimeout(timer);
-          timer = setTimeout(function () {
-            changes(records.splice(timer = 0, records.length));
-          }, 0);
-        };
+      return WeakMap;
 
-        document.addEventListener('DOMNodeRemoved', function (event) {
-          reschedule({
-            addedNodes: [],
-            removedNodes: [event.target]
-          });
-        }, true);
-        document.addEventListener('DOMNodeInserted', function (event) {
-          reschedule({
-            addedNodes: [event.target],
-            removedNodes: []
-          });
-        }, true);
+      function WeakMap(iterable) {
+        dP(this, '_', {
+          value: '_@ungap/weakmap' + id++
+        });
+        if (iterable) iterable.forEach(add, this);
       }
 
-      function changes(records) {
-        dispatched = new Tracker();
-
-        for (var record, length = records.length, i = 0; i < length; i++) {
-          record = records[i];
-          dispatchAll(record.removedNodes, DISCONNECTED, CONNECTED);
-          dispatchAll(record.addedNodes, CONNECTED, DISCONNECTED);
-        }
-
-        dispatched = null;
+      function add(pair) {
+        this.set(pair[0], pair[1]);
       }
-
-      function dispatchAll(nodes, type, counter) {
-        for (var node, event = new Event(type), length = nodes.length, i = 0; i < length; (node = nodes[i++]).nodeType === 1 && dispatchTarget(node, event, type, counter)) {
-        }
-      }
-
-      function dispatchTarget(node, event, type, counter) {
-        if (observer.has(node) && !dispatched[type].has(node)) {
-          dispatched[counter].delete(node);
-          dispatched[type].add(node);
-          node.dispatchEvent(event);
-          /*
-          // The event is not bubbling (perf reason: should it?),
-          // hence there's no way to know if
-          // stop/Immediate/Propagation() was called.
-          // Should DOM Level 0 work at all?
-          // I say it's a YAGNI case for the time being,
-          // and easy to implement in user-land.
-          if (!event.cancelBubble) {
-            var fn = node['on' + type];
-            if (fn)
-              fn.call(node, event);
-          }
-          */
-        }
-
-        for (var // apparently is node.children || IE11 ... ^_^;;
-        // https://github.com/WebReflection/disconnected/issues/1
-        children = node.children || [], length = children.length, i = 0; i < length; dispatchTarget(children[i++], event, type, counter)) {
-        }
-      }
-
-      function Tracker() {
-        this[CONNECTED] = new WeakSet();
-        this[DISCONNECTED] = new WeakSet();
-      }
-    }
+    }(Math.random(), Object);
   }
+
+  var WeakMap$1 = self$3.WeakMap;
 
   /*! (c) Andrea Giammarchi - ISC */
   var importNode = function (document, appendChild, cloneNode, createTextNode, importNode) {
@@ -954,7 +1205,7 @@ var neverland = (function (exports) {
     return VOID_ELEMENTS.test($1) ? $0 : '<' + $1 + $2 + '></' + $1 + '>';
   }
 
-  function create(type, node, path, name) {
+  function create$2(type, node, path, name) {
     return {
       name: name,
       node: node,
@@ -963,7 +1214,7 @@ var neverland = (function (exports) {
     };
   }
 
-  function find(node, path) {
+  function find$1(node, path) {
     var length = path.length;
     var i = 0;
 
@@ -995,7 +1246,7 @@ var neverland = (function (exports) {
             holes.push( // basicHTML or other non standard engines
             // might end up having comments in nodes
             // where they shouldn't, hence this check.
-            SHOULD_USE_TEXT_CONTENT.test(node.nodeName) ? create('text', node, path) : create('any', child, path.concat(i)));
+            SHOULD_USE_TEXT_CONTENT.test(node.nodeName) ? create$2('text', node, path) : create$2('any', child, path.concat(i)));
           }
 
           break;
@@ -1009,7 +1260,7 @@ var neverland = (function (exports) {
           /* istanbul ignore if */
           if (SHOULD_USE_TEXT_CONTENT.test(node.nodeName) && trim.call(child.textContent) === UIDC) {
             parts.shift();
-            holes.push(create('text', node, path));
+            holes.push(create$2('text', node, path));
           }
 
           break;
@@ -1044,7 +1295,7 @@ var neverland = (function (exports) {
           /* istanbul ignore next */
           attributes[realName.toLowerCase()];
           cache.set(name, value);
-          holes.push(create('attr', value, path, realName));
+          holes.push(create$2('attr', value, path, realName));
         }
 
         remove.push(attribute);
@@ -1109,7 +1360,7 @@ var neverland = (function (exports) {
 
         while (i < len) {
           var info = holes[i++];
-          var node = find(content, info.path);
+          var node = find$1(content, info.path);
 
           switch (info.type) {
             case 'any':
@@ -1265,178 +1516,91 @@ var neverland = (function (exports) {
     }
   }();
 
-  // Node.CONSTANTS
-  var DOCUMENT_FRAGMENT_NODE$1 = 11; // SVG related constants
-
-  var OWNER_SVG_ELEMENT = 'ownerSVGElement'; // Custom Elements / MutationObserver constants
-
-  var CONNECTED = 'connected';
-  var DISCONNECTED = 'dis' + CONNECTED;
-
-  /*! (c) Andrea Giammarchi - ISC */
-  var templateLiteral = function () {
-
-    var RAW = 'raw';
-    var isNoOp = false;
-
-    var _templateLiteral = function templateLiteral(tl) {
-      if ( // for badly transpiled literals
-      !(RAW in tl) || // for some version of TypeScript
-      tl.propertyIsEnumerable(RAW) || // and some other version of TypeScript
-      !Object.isFrozen(tl[RAW]) || // or for Firefox < 55
-      /Firefox\/(\d+)/.test((document.defaultView.navigator || {}).userAgent) && parseFloat(RegExp.$1) < 55) {
-        var forever = {};
-
-        _templateLiteral = function templateLiteral(tl) {
-          for (var key = '.', i = 0; i < tl.length; i++) {
-            key += tl[i].length + '.' + tl[i];
-          }
-
-          return forever[key] || (forever[key] = tl);
-        };
-      } else {
-        isNoOp = true;
-      }
-
-      return TL(tl);
-    };
-
-    return TL;
-
-    function TL(tl) {
-      return isNoOp ? tl : _templateLiteral(tl);
-    }
-  }();
-
-  var doc = function doc(node) {
-    return node.ownerDocument || node;
-  };
-  var fragment = function fragment(node) {
-    return doc(node).createDocumentFragment();
-  };
-  var text = function text(node, _text) {
-    return doc(node).createTextNode(_text);
-  }; // appends an array of nodes
-  // to a generic node/fragment
-  // When available, uses append passing all arguments at once
-  // hoping that's somehow faster, even if append has more checks on type
-  // istanbul ignore next
-
-  var append$1 = 'append' in fragment(document) ? function (node, childNodes) {
-    node.append.apply(node, childNodes);
-  } : function (node, childNodes) {
-    var length = childNodes.length;
-
-    for (var i = 0; i < length; i++) {
-      node.appendChild(childNodes[i]);
-    }
-  }; // normalizes the template once for all arguments cases
-
-  var reArguments = function reArguments(template) {
-    var args = [templateLiteral(template)];
-
-    for (var i = 1, length = arguments.length; i < length; i++) {
-      args[i] = arguments[i];
-    }
-
-    return args;
-  }; // just recycling a one-off array to use slice
-  // in every needed place
-
-  var slice = [].slice;
-
-  function Wire(childNodes) {
-    this.childNodes = childNodes;
-    this.length = childNodes.length;
-    this.first = childNodes[0];
-    this.last = childNodes[this.length - 1];
-    this._ = null;
-  } // when a wire is inserted, all its nodes will follow
-
-  Wire.prototype.valueOf = function valueOf(different) {
-    var noFragment = this._ == null;
-    if (noFragment) this._ = fragment(this.first);
-    /* istanbul ignore else */
-
-    if (noFragment || different) append$1(this._, this.childNodes);
-    return this._;
-  }; // when a wire is removed, all its nodes must be removed as well
-
-
-  Wire.prototype.remove = function remove() {
-    this._ = null;
-    var first = this.first;
-    var last = this.last;
-
-    if (this.length === 2) {
-      last.parentNode.removeChild(last);
-    } else {
-      var range = doc(first).createRange();
-      range.setStartBefore(this.childNodes[1]);
-      range.setEndAfter(last);
-      range.deleteContents();
-    }
-
-    return first;
-  };
-
-  var observe = disconnected({
-    Event: CustomEvent$1,
-    WeakSet: WeakSet$1
-  });
-
-  var asHTML = function asHTML(html) {
-    return {
-      html: html
-    };
-  }; // returns nodes from wires and components
-
+  var OWNER_SVG_ELEMENT = 'ownerSVGElement'; // returns nodes from wires and components
 
   var asNode = function asNode(item, i) {
-    return 'ELEMENT_NODE' in item ? item : item.constructor === Wire ? // in the Wire case, the content can be
-    // removed, post-pended, inserted, or pre-pended and
-    // all these cases are handled by domdiff already
-
-    /* istanbul ignore next */
-    1 / i < 0 ? i ? item.remove() : item.last : i ? item.valueOf(true) : item.first : asNode(item.render(), i);
+    return item.nodeType === wireType ? 1 / i < 0 ? i ? item.remove(true) : item.lastChild : i ? item.valueOf(true) : item.firstChild : item;
   }; // returns true if domdiff can handle the value
 
 
   var canDiff = function canDiff(value) {
-    return 'ELEMENT_NODE' in value || value instanceof Wire || value instanceof Component;
-  }; // when a Promise is used as interpolation value
-  // its result must be parsed once resolved.
-  // This callback is in charge of understanding what to do
-  // with a returned value once the promise is resolved.
+    return 'ELEMENT_NODE' in value;
+  }; // generic attributes helpers
 
 
-  var invokeAtDistance = function invokeAtDistance(value, callback) {
-    callback(value.placeholder);
+  var hyperAttribute = function hyperAttribute(node, attribute) {
+    var oldValue;
+    var owner = false;
+    return function (newValue) {
+      if (oldValue !== newValue) {
+        oldValue = newValue;
 
-    if ('text' in value) {
-      Promise.resolve(value.text).then(String).then(callback);
-    } else if ('any' in value) {
-      Promise.resolve(value.any).then(callback);
-    } else if ('html' in value) {
-      Promise.resolve(value.html).then(asHTML).then(callback);
-    } else {
-      Promise.resolve(Intent.invoke(value, callback)).then(callback);
-    }
-  }; // quick and dirty way to check for Promise/ish values
+        if (attribute.value !== newValue) {
+          if (newValue == null) {
+            if (owner) {
+              owner = false;
+              node.removeAttributeNode(attribute);
+            }
+
+            attribute.value = newValue;
+          } else {
+            attribute.value = newValue;
+
+            if (!owner) {
+              owner = true;
+              node.setAttributeNode(attribute);
+            }
+          }
+        }
+      }
+    };
+  }; // events attributes helpers
 
 
-  var isPromise_ish = function isPromise_ish(value) {
-    return value != null && 'then' in value;
+  var hyperEvent = function hyperEvent(node, name) {
+    var oldValue;
+    var type = name.slice(2);
+    if (name.toLowerCase() in node) type = type.toLowerCase();
+    return function (newValue) {
+      if (oldValue !== newValue) {
+        if (oldValue) node.removeEventListener(type, oldValue, false);
+        oldValue = newValue;
+        if (newValue) node.addEventListener(type, newValue, false);
+      }
+    };
+  }; // special attributes helpers
+
+
+  var hyperProperty = function hyperProperty(node, name) {
+    var oldValue;
+    return function (newValue) {
+      if (oldValue !== newValue) {
+        oldValue = newValue;
+
+        if (node[name] !== newValue) {
+          node[name] = newValue;
+
+          if (newValue == null) {
+            node.removeAttribute(name);
+          }
+        }
+      }
+    };
   }; // list of attributes that should not be directly assigned
 
 
-  var readOnly = /^(?:form|list)$/i;
+  var readOnly = /^(?:form|list)$/i; // reused every slice time
+
+  var slice = [].slice; // simplifies text node creation
+
+  var text = function text(node, _text) {
+    return node.ownerDocument.createTextNode(_text);
+  };
 
   function Tagger(type) {
     this.type = type;
     return domtagger(this);
   }
-
   Tagger.prototype = {
     // there are four kind of attributes, and related behavior:
     //  * events, with a name starting with `on`, to add/remove event listeners
@@ -1447,88 +1611,25 @@ var neverland = (function (exports) {
     //    fully inspired by Preact library and its simplicity.
     attribute: function attribute(node, name, original) {
       var isSVG = OWNER_SVG_ELEMENT in node;
-      var oldValue; // if the attribute is the style one
-      // handle it differently from others
 
-      if (name === 'style') return hyperStyle(node, original, isSVG); // the name is an event one,
-      // add/remove event listeners accordingly
-      else if (/^on/.test(name)) {
-          var type = name.slice(2);
+      switch (true) {
+        case name === 'style':
+          return hyperStyle(node, original, isSVG);
 
-          if (type === CONNECTED || type === DISCONNECTED) {
-            observe(node);
-          } else if (name.toLowerCase() in node) {
-            type = type.toLowerCase();
-          }
+        case /^on/.test(name):
+          return hyperEvent(node, name);
 
-          return function (newValue) {
-            if (oldValue !== newValue) {
-              if (oldValue) node.removeEventListener(type, oldValue, false);
-              oldValue = newValue;
-              if (newValue) node.addEventListener(type, newValue, false);
-            }
-          };
-        } // the attribute is special ('value' in input)
-        // and it's not SVG *or* the name is exactly data,
-        // in this case assign the value directly
-        else if (name === 'data' || !isSVG && name in node && !readOnly.test(name)) {
-            return function (newValue) {
-              if (oldValue !== newValue) {
-                oldValue = newValue;
+        case /^(?:data|props)$/.test(name) || !isSVG && name in node && !readOnly.test(name):
+          return hyperProperty(node, name);
 
-                if (node[name] !== newValue) {
-                  node[name] = newValue;
-
-                  if (newValue == null) {
-                    node.removeAttribute(name);
-                  }
-                }
-              }
-            };
-          } else if (name in Intent.attributes) {
-            return function (any) {
-              var newValue = Intent.attributes[name](node, any);
-
-              if (oldValue !== newValue) {
-                oldValue = newValue;
-                if (newValue == null) node.removeAttribute(name);else node.setAttribute(name, newValue);
-              }
-            };
-          } // in every other case, use the attribute node as it is
-          // update only the value, set it as node only when/if needed
-          else {
-              var owner = false;
-              var attribute = original.cloneNode(true);
-              return function (newValue) {
-                if (oldValue !== newValue) {
-                  oldValue = newValue;
-
-                  if (attribute.value !== newValue) {
-                    if (newValue == null) {
-                      if (owner) {
-                        owner = false;
-                        node.removeAttributeNode(attribute);
-                      }
-
-                      attribute.value = newValue;
-                    } else {
-                      attribute.value = newValue;
-
-                      if (!owner) {
-                        owner = true;
-                        node.setAttributeNode(attribute);
-                      }
-                    }
-                  }
-                }
-              };
-            }
+        default:
+          return hyperAttribute(node, original.cloneNode(true));
+      }
     },
     // in a hyper(node)`<div>${content}</div>` case
     // everything could happen:
     //  * it's a JS primitive, stored as text
     //  * it's null or undefined, the node should be cleaned
-    //  * it's a component, update the content by rendering it
     //  * it's a promise, update the content once resolved
     //  * it's an explicit intent, perform the desired operation
     //  * it's an Array, resolve all values if Promises and/or
@@ -1598,22 +1699,13 @@ var neverland = (function (exports) {
                       value = value.concat.apply([], value);
                     }
 
-                    if (isPromise_ish(value[0])) {
-                      Promise.all(value).then(anyContent);
-                      break;
-                    }
-
                   default:
                     childNodes = domdiff(node.parentNode, childNodes, value, diffOptions);
                     break;
                 }
               }
             } else if (canDiff(value)) {
-              childNodes = domdiff(node.parentNode, childNodes, value.nodeType === DOCUMENT_FRAGMENT_NODE$1 ? slice.call(value.childNodes) : [value], diffOptions);
-            } else if (isPromise_ish(value)) {
-              value.then(anyContent);
-            } else if ('placeholder' in value) {
-              invokeAtDistance(value, anyContent);
+              childNodes = domdiff(node.parentNode, childNodes, value.nodeType === 11 ? slice.call(value.childNodes) : [value], diffOptions);
             } else if ('text' in value) {
               anyContent(String(value.text));
             } else if ('any' in value) {
@@ -1622,8 +1714,6 @@ var neverland = (function (exports) {
               childNodes = domdiff(node.parentNode, childNodes, slice.call(createContent([].concat(value.html).join(''), nodeType).childNodes), diffOptions);
             } else if ('length' in value) {
               anyContent(slice.call(value));
-            } else {
-              anyContent(Intent.invoke(value, anyContent));
             }
 
             break;
@@ -1636,7 +1726,7 @@ var neverland = (function (exports) {
     // it's pointless to transform or analyze anything
     // different from text there but it's worth checking
     // for possible defined intents.
-    text: function text$$1(node) {
+    text: function text(node) {
       var oldValue;
 
       var textContent = function textContent(value) {
@@ -1646,11 +1736,7 @@ var neverland = (function (exports) {
           var type = typeof(value);
 
           if (type === 'object' && value) {
-            if (isPromise_ish(value)) {
-              value.then(textContent);
-            } else if ('placeholder' in value) {
-              invokeAtDistance(value, textContent);
-            } else if ('text' in value) {
+            if ('text' in value) {
               textContent(String(value.text));
             } else if ('any' in value) {
               textContent(value.any);
@@ -1658,8 +1744,6 @@ var neverland = (function (exports) {
               textContent([].concat(value.html).join(''));
             } else if ('length' in value) {
               textContent(slice.call(value).join(''));
-            } else {
-              textContent(Intent.invoke(value, textContent));
             }
           } else if (type === 'function') {
             textContent(value(node));
@@ -1673,493 +1757,154 @@ var neverland = (function (exports) {
     }
   };
 
-  var wires = new WeakMap$1(); // A wire is a callback used as tag function
-  // to lazily relate a generic object to a template literal.
-  // hyper.wire(user)`<div id=user>${user.name}</div>`; => the div#user
-  // This provides the ability to have a unique DOM structure
-  // related to a unique JS object through a reusable template literal.
-  // A wire can specify a type, as svg or html, and also an id
-  // via html:id or :id convention. Such :id allows same JS objects
-  // to be associated to different DOM structures accordingly with
-  // the used template literal without losing previously rendered parts.
+  var wm = new WeakMap();
+  var templateType = 0;
+  var current$1 = null; // can be used with any useRef hook
+  // returns an `html` and `svg` function
 
-  var wire = function wire(obj, type) {
-    return obj == null ? content(type || 'html') : weakly(obj, type || 'html');
-  }; // A wire content is a virtual reference to one or more nodes.
-  // It's represented by either a DOM node, or an Array.
-  // In both cases, the wire content role is to simply update
-  // all nodes through the list of related callbacks.
-  // In few words, a wire content is like an invisible parent node
-  // in charge of updating its content like a bound element would do.
+  var hook = function hook(useRef) {
+    return {
+      html: craeteHook(useRef, html),
+      svg: craeteHook(useRef, svg)
+    };
+  }; // generic render
 
+  function render(node, callback) {
+    var content = update(node, callback);
+    if (content !== null) appendClean(node, content);
+    return node;
+  }
+  var html = outer$1('html');
+  var svg = outer$1('svg');
 
-  var content = function content(type) {
-    var wire, tagger, template;
+  function appendClean(node, fragment) {
+    node.textContent = '';
+    node.appendChild(fragment);
+  }
+
+  function asNode$1(result) {
+    return result.nodeType === wireType ? result.valueOf(true) : result;
+  }
+
+  function craeteHook(useRef, view) {
     return function () {
-      var args = reArguments.apply(null, arguments);
+      var ref = useRef(null);
+      if (ref.current === null) ref.current = content.bind(ref);
+      return ref.current.apply(null, arguments);
+    };
 
-      if (template !== args[0]) {
-        template = args[0];
-        tagger = new Tagger(type);
-        wire = wireContent(tagger.apply(tagger, args));
-      } else {
-        tagger.apply(tagger, args);
+    function content() {
+      var args = [];
+
+      for (var i = 0, length = arguments.length; i < length; i++) {
+        args[i] = arguments[i];
       }
 
-      return wire;
-    };
-  }; // wires are weakly created through objects.
-  // Each object can have multiple wires associated
-  // and this is thanks to the type + :id feature.
-
-
-  var weakly = function weakly(obj, type) {
-    var i = type.indexOf(':');
-    var wire = wires.get(obj);
-    var id = type;
-
-    if (-1 < i) {
-      id = type.slice(i + 1);
-      type = type.slice(0, i) || 'html';
-    }
-
-    if (!wire) wires.set(obj, wire = {});
-    return wire[id] || (wire[id] = content(type));
-  }; // A document fragment loses its nodes 
-  // as soon as it is appended into another node.
-  // This has the undesired effect of losing wired content
-  // on a second render call, because (by then) the fragment would be empty:
-  // no longer providing access to those sub-nodes that ultimately need to
-  // stay associated with the original interpolation.
-  // To prevent hyperHTML from forgetting about a fragment's sub-nodes,
-  // fragments are instead returned as an Array of nodes or, if there's only one entry,
-  // as a single referenced node which, unlike fragments, will indeed persist
-  // wire content throughout multiple renderings.
-  // The initial fragment, at this point, would be used as unique reference to this
-  // array of nodes or to this single referenced node.
-
-
-  var wireContent = function wireContent(node) {
-    var childNodes = node.childNodes;
-    return childNodes.length === 1 ? childNodes[0] : new Wire(slice.call(childNodes, 0));
-  };
-
-  // are already known to hyperHTML
-
-  var bewitched = new WeakMap$1(); // better known as hyper.bind(node), the render is
-  // the main tag function in charge of fully upgrading
-  // or simply updating, contexts used as hyperHTML targets.
-  // The `this` context is either a regular DOM node or a fragment.
-
-  function render() {
-    var wicked = bewitched.get(this);
-    var args = reArguments.apply(null, arguments);
-
-    if (wicked && wicked.template === args[0]) {
-      wicked.tagger.apply(null, args);
-    } else {
-      upgrade.apply(this, args);
-    }
-
-    return this;
-  } // an upgrade is in charge of collecting template info,
-  // parse it once, if unknown, to map all interpolations
-  // as single DOM callbacks, relate such template
-  // to the current context, and render it after cleaning the context up
-
-
-  function upgrade() {
-    var args = reArguments.apply(null, arguments);
-    var type = OWNER_SVG_ELEMENT in this ? 'svg' : 'html';
-    var tagger = new Tagger(type);
-    bewitched.set(this, {
-      tagger: tagger,
-      template: args[0]
-    });
-    this.textContent = '';
-    this.appendChild(tagger.apply(null, args));
-  }
-
-  /*! (c) Andrea Giammarchi (ISC) */
-  // you can do the following
-  // const {bind, wire} = hyperHTML;
-  // and use them right away: bind(node)`hello!`;
-
-  var bind = function bind(context) {
-    return render.bind(context);
-  };
-
-  var define = Intent.define;
-  // html or svg property of each hyper.Component
-
-  setup(content); // everything is exported directly or through the
-
-  var now = null;
-  var current = function current() {
-    return now;
-  };
-  var empty = [];
-  var setup$1 = [];
-  var $ = function $(value) {
-    return typeof(value) === typeof($) ? value() : value;
-  };
-  var diff = function diff(a, b) {
-    return a.length !== b.length || a.some(diverse, b);
-  };
-  var stacked = function stacked(id) {
-    return function (runner) {
-      var state = {
-        i: 0,
-        stack: []
-      };
-      runner[id] = state;
-      runner.before.push(function () {
-        state.i = 0;
+      var content = update(this, function () {
+        return view.apply(null, args);
       });
-    };
-  };
-  var id$1 = 0;
-  var uid = function uid() {
-    return '_$' + id$1++;
-  };
-  var unstacked = function unstacked(id) {
-    var _now = now,
-        state = _now[id],
-        update = _now.update;
-    var i = state.i,
-        stack = state.stack;
-    state.i++;
-    return {
-      i: i,
-      stack: stack,
-      update: update,
-      unknown: i === stack.length
-    };
-  };
-  var augmentor = (function (fn) {
-    var current = runner($);
-    each(setup$1, current);
-
-    $.reset = function () {
-      each(current.reset, current);
-
-      for (var key in current) {
-        if (/^_\$/.test(key)) current[key].stack.splice(0);
-      }
-    };
-
-    return $;
-
-    function $() {
-      var prev = now;
-      now = current;
-      var result;
-
-      try {
-        var _ = current._,
-            before = current.before,
-            after = current.after,
-            external = current.external;
-        each(before, current);
-        result = fn.apply(_.c = this, _.a = arguments);
-        each(after, current);
-        if (external.length) each(external.splice(0), result);
-      } catch (o_O) {
-        console.error(o_O);
-      }
-
-      now = prev;
-      return result;
+      if (content) this.content = content;
+      return this.content;
     }
-  });
-
-  var each = function each(arr, value) {
-    var length = arr.length;
-    var i = 0;
-
-    while (i < length) {
-      arr[i++](value);
-    }
-  };
-
-  var runner = function runner($) {
-    var _ = {
-      c: null,
-      a: null
-    };
-    return {
-      _: _,
-      before: [],
-      after: [],
-      external: [],
-      reset: [],
-      update: function update() {
-        return $.apply(_.c, _.a);
-      }
-    };
-  };
-
-  function diverse(value, i) {
-    return value !== this[i];
   }
 
-  var id$2 = uid();
-  var cancel, request;
+  function getWire(type, args) {
+    var _current = current$1,
+        i = _current.i,
+        stack = _current.stack;
+    current$1.i++; // TODO:  a conditional SVG instead of HTML will cause
+    //        surely problems, even if extremely edge case.
+    //        Remember to explain this is a current caveat.
 
-  try {
-    cancel = cancelAnimationFrame;
-    request = requestAnimationFrame;
-  } catch (o_O) {
-    // i.e. if you run this in NodeJS
-    cancel = clearTimeout;
-    request = setTimeout;
+    if (i === stack.length) {
+      var tagger = new Tagger(type);
+      var wire = wireContent(tagger.apply(null, args));
+      stack.push({
+        tagger: tagger,
+        wire: wire
+      });
+      return wire;
+    } else {
+      var _stack$i = stack[i],
+          _tagger = _stack$i.tagger,
+          _wire = _stack$i.wire;
+
+      _tagger.apply(null, args);
+
+      return _wire;
+    }
   }
 
-  var create$1 = function create(always, check, inputs, raf, fn) {
-    return {
-      always: always,
-      check: check,
-      inputs: inputs,
-      raf: raf,
-      fn: fn,
-      clean: null,
-      t: 0,
-      update: check
+  function outer$1(type) {
+    return function () {
+      var $ = tta.apply(null, arguments);
+      return current$1 ? new Template(type, $) : new Tagger(type).apply(null, $);
     };
-  };
+  }
 
-  var effect = function effect(raf) {
-    return function (callback, refs) {
-      var _unstacked = unstacked(id$2),
-          i = _unstacked.i,
-          stack = _unstacked.stack,
-          unknown = _unstacked.unknown;
-
-      var comp = refs || empty;
-
-      if (unknown) {
-        var always = comp === empty;
-
-        var check = always || !raf || typeof(comp) !== typeof(effect);
-
-        if (always || !raf || typeof(comp) !== typeof(effect)) {
-          stack.push(create$1(always, check, comp, raf, function () {
-            set$1(stack[i], callback());
-          }));
-        } else {
-          current().external.push(function (result) {
-            return refs(callback, result);
-          });
-          stack.push(create$1(always, always, empty, raf, effect));
-        }
-      } else {
-        var info = stack[i];
-        var _check = info.check,
-            _always = info.always,
-            inputs = info.inputs;
-
-        if (_check && (_always || diff(inputs, comp))) {
-          info.inputs = comp;
-          info.update = true;
-        }
-      }
-    };
-  };
-
-  var set$1 = function set(info, clean) {
-    info.t = 0;
-    info.clean = clean;
-  };
-
-  setup$1.push(function (runner) {
-    var stack = [];
-    var state = {
+  function set$2(node) {
+    var info = {
       i: 0,
-      stack: stack
+      stack: [],
+      template: null
     };
-    runner[id$2] = state;
+    wm.set(node, info);
+    return info;
+  }
 
-    var reset = function reset() {
-      state.i = 0;
+  function setTemplate(template) {
+    if (current$1.template) current$1.stack.splice(0);
+    current$1.template = template;
+  }
 
-      for (var length = stack.length, i = 0; i < length; i++) {
-        var _stack$i = stack[i],
-            check = _stack$i.check,
-            clean = _stack$i.clean,
-            raf = _stack$i.raf,
-            t = _stack$i.t;
+  function update(reference, callback) {
+    var prev = current$1;
+    current$1 = wm.get(reference) || set$2(reference);
+    current$1.i = 0; // TODO: perf measurement about guarding this
 
-        if (check) {
-          if (raf && t) cancel(t);else if (clean) clean();
-          set$1(stack[i], null);
-        }
+    var result = callback();
+    var ret = null;
+
+    if (result.nodeType === templateType) {
+      var template = result._[0]; // TODO: perf measurement about guarding this
+
+      var content = unroll(result);
+
+      if (current$1.template !== template) {
+        setTemplate(template);
+        ret = asNode$1(content);
       }
-    };
-
-    runner.reset.push(reset);
-    runner.before.push(reset);
-    runner.after.push(function () {
-      for (var length = stack.length, i = 0; i < length; i++) {
-        var _stack$i2 = stack[i],
-            fn = _stack$i2.fn,
-            raf = _stack$i2.raf,
-            update = _stack$i2.update;
-
-        if (update) {
-          if (raf) stack[i].t = request(fn);else stack[i].clean = fn();
-        }
-      }
-    });
-  });
-  var useEffect = effect(true);
-  var useLayoutEffect = effect(false);
-
-  var id$3 = uid();
-  setup$1.push(stacked(id$3));
-  var ref = (function (value) {
-    var _unstacked = unstacked(id$3),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown;
-
-    if (unknown) stack.push({
-      current: $(value)
-    });
-    return stack[i];
-  });
-
-  var id$4 = uid();
-  setup$1.push(stacked(id$4));
-  var useReducer = (function (reducer, value) {
-    var _unstacked = unstacked(id$4),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown,
-        update = _unstacked.update;
-
-    if (unknown) stack.push([$(value), function (action) {
-      value = reducer(value, action);
-      pair[0] = value;
-      update();
-    }]);
-    var pair = stack[i];
-    return pair;
-  });
-
-  var state = (function (value) {
-    return useReducer(function (_, value) {
-      return value;
-    }, value);
-  });
-
-  var id$5 = uid();
-  setup$1.push(stacked(id$5));
-  var useMemo = (function (callback, refs) {
-    var _unstacked = unstacked(id$5),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown;
-
-    var comp = refs || empty;
-    if (unknown) stack.push(create$2(callback, comp));
-    var _stack$i = stack[i],
-        filter = _stack$i.filter,
-        value = _stack$i.value,
-        fn = _stack$i.fn,
-        inputs = _stack$i.inputs;
-    return (filter ? diff(inputs, comp) : callback !== fn) ? (stack[i] = create$2(callback, comp)).value : value;
-  });
-
-  var create$2 = function create(fn, inputs) {
-    return {
-      filter: inputs !== empty,
-      value: fn(),
-      fn: fn,
-      inputs: inputs
-    };
-  };
-
-  var callback = (function (fn, inputs) {
-    return useMemo(function () {
-      return fn;
-    }, inputs);
-  });
-
-  var id$6 = 0;
-
-  var find$1 = function find(node) {
-    var childNodes = node.childNodes;
-    var length = childNodes.length;
-    var i = 0;
-
-    while (i < length) {
-      var child = childNodes[i++];
-      if (child.nodeType === 1) return child;
+    } else {
+      setTemplate(null);
+      ret = asNode$1(result);
     }
 
-    throw 'unobservable';
-  };
+    current$1 = prev;
+    return ret;
+  }
 
-  var observer = function observer($, wire$$1) {
-    var node = wire$$1.nodeType === 1 ? wire$$1 : find$1(wire$$1);
-    observe(node);
-    var handler = {
-      connected: connected,
-      disconnected: disconnected$1,
-      handleEvent: handleEvent,
-      $: $,
-      _: null
-    };
-    node.addEventListener('connected', handler);
-    node.addEventListener('disconnected', handler);
-  }; // every html`...` and svg`...` will be unrolled after
-
-
-  var unroll = function unroll(dom, ref$$1, template) {
+  function unroll(template) {
     var $ = template.$,
         _ = template._;
     var length = _.length;
 
     for (var i = 1; i < length; i++) {
-      var interpolation = _[i];
-
-      if (interpolation) {
-        if (interpolation instanceof Template) _[i] = unroll(false, ref$$1, interpolation);else if (interpolation instanceof Array) interpolation.forEach(deepUnroll, ref$$1);
-      }
+      unrollDeep(_[i], i, _);
     }
 
-    var result = wire(ref$$1, $ + ':' + id$6++).apply(null, _);
-    return dom && !('nodeType' in result) ? result.valueOf(!result.first.parentNode) : result;
-  };
-
-  var useEffect$1 = function useEffect$$1(fn, inputs) {
-    var args = [fn];
-    if (inputs) // if the inputs is an empty array
-      // observe the returned wire for connect/disconnect events
-      // and invoke effects/cleanup on these events only
-      args.push(inputs.length ? inputs : observer);
-    return useEffect.apply(null, args);
-  };
-
-  var index = (function (fn) {
-    return augmentor(function ref$$1() {
-      var prev = id$6;
-      id$6 = 0;
-
-      try {
-        return unroll(true, ref$$1, fn.apply(this, arguments));
-      } catch (o_O) {
-        console.error(o_O);
-      } finally {
-        id$6 = prev;
-      }
-    });
-  });
-  function html() {
-    return new Template('html', arguments);
+    return getWire($, _);
   }
-  function svg() {
-    return new Template('svg', arguments);
+
+  function unrollDeep(value, i, array) {
+    if (value) {
+      if (value.nodeType === 0) array[i] = unroll(value);else if (isArray(value)) value.forEach(unrollDeep);
+    }
+  }
+
+  function wireContent(node) {
+    var childNodes = node.childNodes;
+    var length = childNodes.length;
+    return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
   }
 
   function Template($, _) {
@@ -2167,40 +1912,31 @@ var neverland = (function (exports) {
     this._ = _;
   }
 
-  function deepUnroll(value, i, array) {
-    if (value instanceof Template) array[i] = unroll(false, this, value);
-  } // handlers methods
+  var TP = Template.prototype;
+  TP.nodeType = templateType;
 
+  TP.valueOf = function () {
+    return unroll(this);
+  };
 
-  function connected() {
-    disconnected$1.call(this);
-    this._ = this.$();
-  }
+  var _hook = hook(useRef),
+      html$1 = _hook.html,
+      svg$1 = _hook.svg;
 
-  function disconnected$1() {
-    var _ = this._;
-    this._ = null;
-    if (_) _();
-  }
-
-  function handleEvent(e) {
-    this[e.type]();
-  }
+  var index = (function (fn) {
+    return augmentor(fn);
+  });
 
   exports.default = index;
-  exports.html = html;
-  exports.svg = svg;
-  exports.Component = Component;
-  exports.bind = bind;
-  exports.define = define;
-  exports.observe = observe;
-  exports.wire = wire;
+  exports.render = render;
+  exports.html = html$1;
+  exports.svg = svg$1;
   exports.useCallback = callback;
   exports.useEffect = useEffect$1;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;
   exports.useReducer = useReducer;
-  exports.useRef = ref;
+  exports.useRef = useRef;
   exports.useState = state;
 
   return exports;
