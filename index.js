@@ -1764,18 +1764,20 @@ var neverland = (function (exports) {
 
   var hook = function hook(useRef) {
     return {
-      html: craeteHook(useRef, html),
-      svg: craeteHook(useRef, svg)
+      html: createHook(useRef, html),
+      svg: createHook(useRef, svg)
     };
-  }; // generic render
+  }; // generic content render
 
   function render(node, callback) {
     var content = update(node, callback);
     if (content !== null) appendClean(node, content);
     return node;
-  }
+  } // keyed render via render(node, () => html`...`)
+  // non keyed renders in the wild via html`...`
+
   var html = outer$1('html');
-  var svg = outer$1('svg');
+  var svg = outer$1('svg'); // - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
   function appendClean(node, fragment) {
     node.textContent = '';
@@ -1786,7 +1788,7 @@ var neverland = (function (exports) {
     return result.nodeType === wireType ? result.valueOf(true) : result;
   }
 
-  function craeteHook(useRef, view) {
+  function createHook(useRef, view) {
     return function () {
       var ref = useRef(null);
       if (ref.current === null) ref.current = content.bind(ref);
@@ -1811,27 +1813,26 @@ var neverland = (function (exports) {
   function getWire(type, args) {
     var _current = current$1,
         i = _current.i,
+        length = _current.length,
         stack = _current.stack;
-    current$1.i++; // TODO:  a conditional SVG instead of HTML will cause
-    //        surely problems, even if extremely edge case.
-    //        Remember to explain this is a current caveat.
+    current$1.i++;
 
-    if (i === stack.length) {
-      var tagger = new Tagger(type);
-      var wire = wireContent(tagger.apply(null, args));
-      stack.push({
-        tagger: tagger,
-        wire: wire
-      });
+    if (i < length) {
+      var _stack$i = stack[i],
+          tagger = _stack$i.tagger,
+          wire = _stack$i.wire;
+      tagger.apply(null, unrollArray(args, 1));
       return wire;
     } else {
-      var _stack$i = stack[i],
-          _tagger = _stack$i.tagger,
-          _wire = _stack$i.wire;
+      var _tagger = new Tagger(type);
 
-      _tagger.apply(null, args);
-
-      return _wire;
+      var stacked = {
+        tagger: _tagger,
+        wire: null
+      };
+      current$1.length = stack.push(stacked);
+      stacked.wire = wireContent(_tagger.apply(null, unrollArray(args, 1)));
+      return stacked.wire;
     }
   }
 
@@ -1845,6 +1846,7 @@ var neverland = (function (exports) {
   function set$2(node) {
     var info = {
       i: 0,
+      length: 0,
       stack: [],
       template: null
     };
@@ -1853,8 +1855,30 @@ var neverland = (function (exports) {
   }
 
   function setTemplate(template) {
-    if (current$1.template) current$1.stack.splice(0);
+    if (current$1.template) {
+      current$1.length = 0;
+      current$1.stack.splice(0);
+    }
+
     current$1.template = template;
+  }
+
+  function unroll(template) {
+    var $ = template.$,
+        _ = template._;
+    return getWire($, _);
+  }
+
+  function unrollArray(array, i) {
+    for (var _i = 0, length = array.length; _i < length; _i++) {
+      var value = array[_i];
+
+      if (value) {
+        if (value.nodeType === 0) array[_i] = unroll(value);else if (isArray(value)) array[_i] = unrollArray(value, 0);
+      }
+    }
+
+    return array;
   }
 
   function update(reference, callback) {
@@ -1869,6 +1893,13 @@ var neverland = (function (exports) {
       var template = result._[0]; // TODO: perf measurement about guarding this
 
       var content = unroll(result);
+      var _current2 = current$1,
+          i = _current2.i;
+
+      if (i < current$1.length) {
+        current$1.length = i;
+        current$1.stack.splice(i);
+      }
 
       if (current$1.template !== template) {
         setTemplate(template);
@@ -1881,24 +1912,6 @@ var neverland = (function (exports) {
 
     current$1 = prev;
     return ret;
-  }
-
-  function unroll(template) {
-    var $ = template.$,
-        _ = template._;
-    var length = _.length;
-
-    for (var i = 1; i < length; i++) {
-      unrollDeep(_[i], i, _);
-    }
-
-    return getWire($, _);
-  }
-
-  function unrollDeep(value, i, array) {
-    if (value) {
-      if (value.nodeType === 0) array[i] = unroll(value);else if (isArray(value)) value.forEach(unrollDeep);
-    }
   }
 
   function wireContent(node) {
@@ -1916,6 +1929,7 @@ var neverland = (function (exports) {
   TP.nodeType = templateType;
 
   TP.valueOf = function () {
+    // TODO: perf measurement about guarding this
     return unroll(this);
   };
 
