@@ -34,9 +34,9 @@
     "drop-babel-typeof": "^1.0.1",
     "http-server": "^0.11.1",
     "nightmare": "^3.0.1",
-    "rollup": "^0.66.6",
+    "rollup": "^1.1.0",
     "rollup-plugin-babel": "^4.0.3",
-    "rollup-plugin-node-resolve": "^3.4.0",
+    "rollup-plugin-node-resolve": "^4.0.0",
     "uglify-es": "^3.3.9"
   },
   "repository": {
