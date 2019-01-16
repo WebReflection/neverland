@@ -116,7 +116,6 @@ var neverland = (function (exports) {
     function $() {
       var prev = now;
       now = current;
-      var result;
 
       try {
         var _ = current._,
@@ -124,15 +123,13 @@ var neverland = (function (exports) {
             after = current.after,
             external = current.external;
         each(before, current);
-        result = fn.apply(_.c = this, _.a = arguments);
+        var result = fn.apply(_.c = this, _.a = arguments);
         each(after, current);
         if (external.length) each(external.splice(0), result);
-      } catch (o_O) {
-        console.error(o_O);
+        return result;
+      } finally {
+        now = prev;
       }
-
-      now = prev;
-      return result;
     }
   });
 
@@ -269,7 +266,8 @@ var neverland = (function (exports) {
             update = _stack$i2.update;
 
         if (update) {
-          if (raf) stack[i].t = request(fn);else stack[i].clean = fn();
+          stack[i].update = false;
+          if (raf) stack[i].t = request(fn);else fn();
         }
       }
     });
@@ -1770,7 +1768,7 @@ var neverland = (function (exports) {
   }; // generic content render
 
   function render(node, callback) {
-    var content = update(node, callback);
+    var content = update.call(this, node, callback);
     if (content !== null) appendClean(node, content);
     return node;
   } // keyed render via render(node, () => html`...`)
@@ -1836,10 +1834,16 @@ var neverland = (function (exports) {
     }
   }
 
-  function outer$1(type) {
+  function outer$1($) {
     return function () {
-      var $ = tta.apply(null, arguments);
-      return current$1 ? new Template(type, $) : new Tagger(type).apply(null, $);
+      var _ = tta.apply(null, arguments);
+
+      return current$1 ? {
+        nodeType: 0,
+        valueOf: valueOf,
+        $: $,
+        _: _
+      } : new Tagger($).apply(null, _);
     };
   }
 
@@ -1886,7 +1890,7 @@ var neverland = (function (exports) {
     current$1 = wm.get(reference) || set$2(reference);
     current$1.i = 0; // TODO: perf measurement about guarding this
 
-    var result = callback();
+    var result = callback.call(this);
     var ret = null;
 
     if (result.nodeType === templateType) {
@@ -1919,19 +1923,6 @@ var neverland = (function (exports) {
     var length = childNodes.length;
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
   }
-
-  function Template($, _) {
-    this.$ = $;
-    this._ = _;
-  }
-
-  var TP = Template.prototype;
-  TP.nodeType = templateType;
-
-  TP.valueOf = function () {
-    // TODO: perf measurement about guarding this
-    return unroll(this);
-  };
 
   var _hook = hook(useRef),
       html$1 = _hook.html,
