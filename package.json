@@ -24,7 +24,7 @@
   "author": "Andrea Giammarchi",
   "license": "ISC",
   "dependencies": {
-    "dom-augmentor": "^0.1.5",
+    "dom-augmentor": "^0.2.0",
     "lighterhtml": "^0.4.0"
   },
   "devDependencies": {

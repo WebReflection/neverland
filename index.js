@@ -355,6 +355,9 @@ var neverland = (function (exports) {
     }, value);
   });
 
+  var id$6 = uid();
+  setup.push(stacked(id$6));
+
   /*! (c) Andrea Giammarchi */
   function disconnected(poly) {
 
