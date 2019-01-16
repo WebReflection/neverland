@@ -116,18 +116,25 @@ var neverland = (function (exports) {
     function $() {
       var prev = now;
       now = current;
+      var _ = current._,
+          before = current.before,
+          after = current.after,
+          external = current.external;
 
       try {
-        var _ = current._,
-            before = current.before,
-            after = current.after,
-            external = current.external;
-        each(before, current);
-        var result = fn.apply(_.c = this, _.a = arguments);
-        each(after, current);
-        if (external.length) each(external.splice(0), result);
+        var result;
+
+        do {
+          _.$ = _._ = false;
+          each(before, current);
+          result = fn.apply(_.c = this, _.a = arguments);
+          each(after, current);
+          if (external.length) each(external.splice(0), result);
+        } while (_._);
+
         return result;
       } finally {
+        _.$ = true;
         now = prev;
       }
     }
@@ -144,6 +151,8 @@ var neverland = (function (exports) {
 
   var runner = function runner($) {
     var _ = {
+      _: true,
+      $: true,
       c: null,
       a: null
     };
@@ -154,7 +163,7 @@ var neverland = (function (exports) {
       external: [],
       reset: [],
       update: function update() {
-        return $.apply(_.c, _.a);
+        return _.$ ? $.apply(_.c, _.a) : _._ = true;
       }
     };
   };
@@ -291,8 +300,41 @@ var neverland = (function (exports) {
 
   var id$4 = uid();
   setup.push(stacked(id$4));
-  var useReducer = (function (reducer, value) {
+  var useMemo = (function (callback, refs) {
     var _unstacked = unstacked(id$4),
+        i = _unstacked.i,
+        stack = _unstacked.stack,
+        unknown = _unstacked.unknown;
+
+    var comp = refs || empty;
+    if (unknown) stack.push(create$1(callback, comp));
+    var _stack$i = stack[i],
+        filter = _stack$i.filter,
+        value = _stack$i.value,
+        fn = _stack$i.fn,
+        inputs = _stack$i.inputs;
+    return (filter ? diff(inputs, comp) : callback !== fn) ? stack[i] = create$1(callback, comp) : value;
+  });
+
+  var create$1 = function create(fn, inputs) {
+    return {
+      filter: inputs !== empty,
+      value: fn(),
+      fn: fn,
+      inputs: inputs
+    };
+  };
+
+  var callback = (function (fn, inputs) {
+    return useMemo(function () {
+      return fn;
+    }, inputs);
+  });
+
+  var id$5 = uid();
+  setup.push(stacked(id$5));
+  var useReducer = (function (reducer, value) {
+    var _unstacked = unstacked(id$5),
         i = _unstacked.i,
         stack = _unstacked.stack,
         unknown = _unstacked.unknown,
@@ -311,39 +353,6 @@ var neverland = (function (exports) {
     return useReducer(function (_, value) {
       return value;
     }, value);
-  });
-
-  var id$5 = uid();
-  setup.push(stacked(id$5));
-  var useMemo = (function (callback, refs) {
-    var _unstacked = unstacked(id$5),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown;
-
-    var comp = refs || empty;
-    if (unknown) stack.push(create$1(callback, comp));
-    var _stack$i = stack[i],
-        filter = _stack$i.filter,
-        value = _stack$i.value,
-        fn = _stack$i.fn,
-        inputs = _stack$i.inputs;
-    return (filter ? diff(inputs, comp) : callback !== fn) ? (stack[i] = create$1(callback, comp)).value : value;
-  });
-
-  var create$1 = function create(fn, inputs) {
-    return {
-      filter: inputs !== empty,
-      value: fn(),
-      fn: fn,
-      inputs: inputs
-    };
-  };
-
-  var callback = (function (fn, inputs) {
-    return useMemo(function () {
-      return fn;
-    }, inputs);
   });
 
   /*! (c) Andrea Giammarchi */
