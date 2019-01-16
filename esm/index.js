@@ -11,7 +11,9 @@ import augmentor, {
 import {render, hook} from 'lighterhtml';
 
 const {html, svg} = hook(useRef);
-export default fn => augmentor(fn);
+export default fn => function () {
+  return augmentor(fn).apply(this, arguments);
+};
 
 export {
   render, html, svg,

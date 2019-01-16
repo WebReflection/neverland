@@ -13,7 +13,9 @@ const {
 const {render, hook} = require('lighterhtml');
 
 const {html, svg} = hook(useRef);
-Object.defineProperty(exports, '__esModule', {value: true}).default = fn => augmentor(fn);
+Object.defineProperty(exports, '__esModule', {value: true}).default = fn => function () {
+  return augmentor(fn).apply(this, arguments);
+};
 
 exports.render = render;
 exports.html = html;
