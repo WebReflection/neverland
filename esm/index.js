@@ -32,7 +32,6 @@ export default fn => {
 };
 
 export {
-  augmentor,
   render, html, svg,
   useCallback,
   useEffect,

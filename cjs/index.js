@@ -33,7 +33,6 @@ Object.defineProperty(exports, '__esModule', {value: true}).default = fn => {
   });
 };
 
-exports.augmentor = augmentor;
 exports.render = render;
 exports.html = html;
 exports.svg = svg;

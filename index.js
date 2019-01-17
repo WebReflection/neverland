@@ -1976,7 +1976,6 @@ var neverland = (function (exports) {
   });
 
   exports.default = index;
-  exports.augmentor = augmentor;
   exports.render = render;
   exports.html = html$1;
   exports.svg = svg$1;
