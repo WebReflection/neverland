@@ -5,8 +5,7 @@ addEventListener(
     const {
       default: MrSmee,  // alias as you prefer
       html,             // svg too if you need it
-      useEffect, useReducer, useRef, useState,
-      useCallback
+      useEffect, useReducer, useRef, useState
     } = neverland;
 
     const demo = (name, Component) => {

@@ -179,26 +179,29 @@ var neverland = (function (exports) {
     cancel = cancelAnimationFrame;
     request = requestAnimationFrame;
   } catch (o_O) {
-    // i.e. if you run this in NodeJS
     cancel = clearTimeout;
     request = setTimeout;
   }
 
-  var create = function create(always, check, inputs, raf, fn) {
-    return {
+  var create = function create(always, check, inputs, raf, cb, stack, i) {
+    var info = {
       always: always,
+      cb: cb,
       check: check,
+      clean: null,
       inputs: inputs,
       raf: raf,
-      fn: fn,
-      clean: null,
       t: 0,
-      update: check
+      update: check,
+      fn: function fn() {
+        set$1(stack[i], info.cb());
+      }
     };
+    return info;
   };
 
   var effect = function effect(raf) {
-    return function (callback, refs) {
+    return function (cb, refs) {
       var _unstacked = unstacked(id$2),
           i = _unstacked.i,
           stack = _unstacked.stack,
@@ -212,14 +215,12 @@ var neverland = (function (exports) {
         var check = always || !raf || typeof(comp) !== typeof(effect);
 
         if (always || !raf || typeof(comp) !== typeof(effect)) {
-          stack.push(create(always, check, comp, raf, function () {
-            set$1(stack[i], callback());
-          }));
+          stack.push(create(always, check, comp, raf, cb, stack, i));
         } else {
           current().external.push(function (result) {
-            return refs(callback, result);
+            return refs(cb, result);
           });
-          stack.push(create(always, always, empty, raf, effect));
+          stack.push(create(always, always, empty, raf, effect, stack, i));
         }
       } else {
         var info = stack[i];
@@ -228,6 +229,7 @@ var neverland = (function (exports) {
             inputs = info.inputs;
 
         if (_check && (_always || diff(inputs, comp))) {
+          info.cb = cb;
           info.inputs = comp;
           info.update = true;
         }
@@ -269,14 +271,14 @@ var neverland = (function (exports) {
     runner.before.push(reset);
     runner.after.push(function () {
       for (var length = stack.length, i = 0; i < length; i++) {
-        var _stack$i2 = stack[i],
-            fn = _stack$i2.fn,
-            raf = _stack$i2.raf,
-            update = _stack$i2.update;
+        var _current = stack[i];
+        var fn = _current.fn,
+            raf = _current.raf,
+            update = _current.update;
 
         if (update) {
-          stack[i].update = false;
-          if (raf) stack[i].t = request(fn);else fn();
+          _current.update = false;
+          if (raf) _current.t = request(fn);else fn();
         }
       }
     });
@@ -1956,21 +1958,35 @@ var neverland = (function (exports) {
 
   var index = (function (fn) {
     var index;
+    var counter = [];
     var stack = [];
 
     var effect = function effect() {
       var i = index.current;
 
       if (0 < i) {
-        if (stack.length < i) stack.splice(i);
+        if (stack.length < i) {
+          stack.splice(i);
+          counter.splice(i);
+        }
+
         index.current = 0;
       }
     };
 
     return augmentor(function () {
       index = useRef(0);
+      var _index = index,
+          current = _index.current;
       useEffect$1(effect);
-      if (index.current === stack.length) stack.push(augmentor(fn));
+
+      if (current === stack.length) {
+        var cb = augmentor(fn);
+        stack.push(cb);
+        counter.push(cb);
+      }
+
+      if (stack[current] !== counter[current]) stack[current] = counter[current] = augmentor(fn);
       return stack[index.current++].apply(this, arguments);
     });
   });
