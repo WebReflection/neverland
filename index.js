@@ -1994,7 +1994,7 @@ var neverland = (function (exports) {
     var counter = [];
     var stack = [];
 
-    var effect = function effect() {
+    var reset = function reset() {
       var i = index.current;
 
       if (0 < i) {
@@ -2005,6 +2005,10 @@ var neverland = (function (exports) {
 
         index.current = 0;
       }
+    };
+
+    var effect = function effect() {
+      return reset;
     };
 
     return augmentor(function () {
