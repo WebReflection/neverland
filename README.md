@@ -40,6 +40,7 @@ All hooks behave as close as possible to their _React_ counter part.
   * Basic Hooks
     * [useState](https://reactjs.org/docs/hooks-reference.html#usestate)
     * [useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect)
+    * [useContext](https://reactjs.org/docs/hooks-reference.html#usecontext) **experimental**
   * Additional Hooks
     * [useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer)
     * [useCallback](https://reactjs.org/docs/hooks-reference.html#usecallback)
