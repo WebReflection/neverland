@@ -49,9 +49,9 @@ All hooks behave as close as possible to their _React_ counter part.
     * [useLayoutEffect](https://reactjs.org/docs/hooks-reference.html#uselayouteffect)
 
 
-#### About `useContext` and `useImperativeMethods`
+#### About `useImperativeMethods`
 
-These two hooks are strictly _React_ oriented and have no meaning in current _dom-augmentor_ world.
+This hook is strictly _React_ oriented and it has no meaning in current _dom-augmentor_ world.
 
 
 ### How To ...
