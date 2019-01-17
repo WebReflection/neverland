@@ -1711,9 +1711,11 @@ var neverland = (function (exports) {
                   case 'string':
                   case 'number':
                   case 'boolean':
-                    anyContent({
-                      text: value
-                    });
+                    anyContent(String(value));
+                    break;
+
+                  case 'function':
+                    anyContent(value.map(invoke, node));
                     break;
 
                   case 'object':
@@ -1778,6 +1780,10 @@ var neverland = (function (exports) {
       return textContent;
     }
   };
+
+  function invoke(callback) {
+    return callback(this);
+  }
 
   var wm = new WeakMap();
   var templateType = 0;
