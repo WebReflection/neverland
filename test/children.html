@@ -9,26 +9,29 @@
 </head>
 <body>
   <script>
-const {default: $, render, html} = neverland;
+const {default: $, augmentor, render, html, useRef, useState} = neverland;
 
-const Child = $((name) => html`
-  <div>${name}</div>`
+const Child = $((name, i) => html`
+  <div>${name} ${i}</div>`
 );
 
 const Parent = $((children) => html`
   <div>${children}</div>
 `);
 
-const App = $(() => html`
+const App = $(() => {
+  const [i, update] = useState(0);
+  setTimeout(update, 1000, i + 1);
+  return html`
   <div>
     ${Parent([
-      Child("apple"),
-      Child("banana"),
-      Child("cherry")
+      Child("apple", i),
+      Child("banana", i),
+      Child("cherry", i)
     ])}
   </div>
-  `
-);
+  `;
+});
 
 render(document.body, App);
 

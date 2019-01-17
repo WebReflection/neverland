@@ -1955,12 +1955,28 @@ var neverland = (function (exports) {
       svg$1 = _hook.svg;
 
   var index = (function (fn) {
-    return function () {
-      return augmentor(fn).apply(this, arguments);
+    var index;
+    var stack = [];
+
+    var effect = function effect() {
+      var i = index.current;
+
+      if (0 < i) {
+        if (stack.length < i) stack.splice(i);
+        index.current = 0;
+      }
     };
+
+    return augmentor(function () {
+      index = useRef(0);
+      useEffect$1(effect);
+      if (index.current === stack.length) stack.push(augmentor(fn));
+      return stack[index.current++].apply(this, arguments);
+    });
   });
 
   exports.default = index;
+  exports.augmentor = augmentor;
   exports.render = render;
   exports.html = html$1;
   exports.svg = svg$1;
