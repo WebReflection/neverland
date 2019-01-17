@@ -315,7 +315,7 @@ var neverland = (function (exports) {
         value = _stack$i.value,
         fn = _stack$i.fn,
         inputs = _stack$i.inputs;
-    return (filter ? diff(inputs, comp) : callback !== fn) ? stack[i] = create$1(callback, comp) : value;
+    return (filter ? diff(inputs, comp) : callback !== fn) ? (stack[i] = create$1(callback, comp)).value : value;
   });
 
   var create$1 = function create(fn, inputs) {
