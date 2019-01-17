@@ -2,6 +2,7 @@
 const augmentor = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('dom-augmentor'));
 const {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -46,6 +47,7 @@ exports.render = render;
 exports.html = html;
 exports.svg = svg;
 exports.useCallback = useCallback;
+exports.useContext = useContext;
 exports.useEffect = useEffect;
 exports.useLayoutEffect = useLayoutEffect;
 exports.useMemo = useMemo;

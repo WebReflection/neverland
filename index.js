@@ -357,8 +357,23 @@ var neverland = (function (exports) {
     }, value);
   });
 
+  var all = new WeakMap();
   var id$6 = uid();
   setup.push(stacked(id$6));
+  var useContext = function useContext(context) {
+    var _unstacked = unstacked(id$6),
+        i = _unstacked.i,
+        stack = _unstacked.stack,
+        unknown = _unstacked.unknown,
+        update = _unstacked.update;
+
+    if (unknown) {
+      all.get(context).push(update);
+      stack.push(context);
+    }
+
+    return stack[i].value;
+  };
 
   /*! (c) Andrea Giammarchi */
   function disconnected(poly) {
@@ -1996,6 +2011,7 @@ var neverland = (function (exports) {
   exports.html = html$1;
   exports.svg = svg$1;
   exports.useCallback = callback;
+  exports.useContext = useContext;
   exports.useEffect = useEffect$1;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;

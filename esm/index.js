@@ -1,5 +1,6 @@
 import augmentor, {
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -43,6 +44,7 @@ export default fn => {
 export {
   render, html, svg,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
