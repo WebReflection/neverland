@@ -1,6 +1,7 @@
 'use strict';
 const augmentor = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('dom-augmentor'));
 const {
+  createContext,
   useCallback,
   useContext,
   useEffect,
@@ -46,6 +47,7 @@ Object.defineProperty(exports, '__esModule', {value: true}).default = fn => {
 exports.render = render;
 exports.html = html;
 exports.svg = svg;
+exports.createContext = createContext;
 exports.useCallback = useCallback;
 exports.useContext = useContext;
 exports.useEffect = useEffect;

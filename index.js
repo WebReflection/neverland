@@ -360,6 +360,14 @@ var neverland = (function (exports) {
   var all = new WeakMap();
   var id$6 = uid();
   setup.push(stacked(id$6));
+  var createContext = function createContext() {
+    var context = {
+      value: void 0,
+      provide: provide
+    };
+    all.set(context, []);
+    return context;
+  };
   var useContext = function useContext(context) {
     var _unstacked = unstacked(id$6),
         i = _unstacked.i,
@@ -374,6 +382,16 @@ var neverland = (function (exports) {
 
     return stack[i].value;
   };
+
+  function provide(value) {
+    if (this.value !== value) {
+      this.value = value;
+
+      for (var arr = all.get(this), length = arr.length, i = 0; i < length; i++) {
+        arr[i]();
+      }
+    }
+  }
 
   /*! (c) Andrea Giammarchi */
   function disconnected(poly) {
@@ -2010,6 +2028,7 @@ var neverland = (function (exports) {
   exports.render = render;
   exports.html = html$1;
   exports.svg = svg$1;
+  exports.createContext = createContext;
   exports.useCallback = callback;
   exports.useContext = useContext;
   exports.useEffect = useEffect$1;
