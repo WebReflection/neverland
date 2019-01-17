@@ -17,7 +17,7 @@ export default fn => {
   let index;
   const counter = [];
   const stack = [];
-  const effect = () => {
+  const reset = () => {
     const i = index.current;
     if (0 < i) {
       if (stack.length < i) {
@@ -27,6 +27,7 @@ export default fn => {
       index.current = 0;
     }
   };
+  const effect = () => reset;
   return augmentor(function () {
     index = useRef(0);
     const {current} = index;
