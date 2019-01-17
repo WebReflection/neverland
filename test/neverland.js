@@ -956,7 +956,7 @@ var neverland = (function (exports) {
         case INSERTION:
           // TODO: bulk appends for sequential nodes
           live.set(futureNodes[futureStart], 1);
-          append(get, parentNode, futureNodes, futureStart++, futureStart, currentIndex < currentLength ? get(currentNodes[currentIndex], 1) : before);
+          append(get, parentNode, futureNodes, futureStart++, futureStart, currentIndex < currentLength ? get(currentNodes[currentIndex], 0) : before);
           break;
 
         case DELETION:
@@ -1630,7 +1630,7 @@ var neverland = (function (exports) {
       var isSVG = OWNER_SVG_ELEMENT in node;
 
       switch (true) {
-        case /^on/.test(name):
+        case name.slice(0, 2) === 'on':
           return hyperEvent(node, name);
 
         case name === 'style':
@@ -1639,7 +1639,9 @@ var neverland = (function (exports) {
         case name === 'ref':
           return hyperRef(node, original, isSVG);
 
-        case /^(?:data|props)$/.test(name) || !isSVG && name in node && !readOnly.test(name):
+        case name === 'data':
+        case name === 'props':
+        case !isSVG && name in node && !readOnly.test(name):
           return hyperProperty(node, name);
 
         default:
