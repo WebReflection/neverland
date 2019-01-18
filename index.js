@@ -294,9 +294,14 @@ var neverland = (function (exports) {
         stack = _unstacked.stack,
         unknown = _unstacked.unknown;
 
-    if (unknown) stack.push({
-      current: $(value)
-    });
+    if (unknown) {
+      var info = {
+        current: null
+      };
+      stack.push(info);
+      info.current = $(value);
+    }
+
     return stack[i];
   });
 
@@ -309,22 +314,25 @@ var neverland = (function (exports) {
         unknown = _unstacked.unknown;
 
     var comp = refs || empty;
-    if (unknown) stack.push(create$1(callback, comp));
+    if (unknown) create$1(stack, -1, callback, comp);
     var _stack$i = stack[i],
         filter = _stack$i.filter,
         value = _stack$i.value,
         fn = _stack$i.fn,
         inputs = _stack$i.inputs;
-    return (filter ? diff(inputs, comp) : callback !== fn) ? (stack[i] = create$1(callback, comp)).value : value;
+    return (filter ? diff(inputs, comp) : callback !== fn) ? create$1(stack, i, callback, comp) : value;
   });
 
-  var create$1 = function create(fn, inputs) {
-    return {
+  var create$1 = function create(stack, i, fn, inputs) {
+    var info = {
       filter: inputs !== empty,
-      value: fn(),
+      value: null,
       fn: fn,
       inputs: inputs
     };
+    if (i < 0) stack.push(info);else stack[i] = info;
+    info.value = fn();
+    return info.value;
   };
 
   var callback = (function (fn, inputs) {
@@ -342,13 +350,17 @@ var neverland = (function (exports) {
         unknown = _unstacked.unknown,
         update = _unstacked.update;
 
-    if (unknown) stack.push([$(value), function (action) {
-      value = reducer(value, action);
-      pair[0] = value;
-      update();
-    }]);
-    var pair = stack[i];
-    return pair;
+    if (unknown) {
+      var info = [null, function (action) {
+        value = reducer(value, action);
+        info[0] = value;
+        update();
+      }];
+      stack.push(info);
+      info[0] = $(value);
+    }
+
+    return stack[i];
   });
 
   var state = (function (value) {
