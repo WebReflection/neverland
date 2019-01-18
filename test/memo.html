@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>DOM Augmentor</title>
+  <script src="../index.js"></script>
+  <script defer type="module">
+const {createContext, useContext, useEffect, useMemo, useState, html, render} = window.neverland;
+const component = window.neverland.default;
+
+const TickContext = createContext();
+
+const withTick = Component => props => {
+  const tick = useContext(TickContext);
+  return Component(Object.assign({}, props, {tick}));
+};
+
+const memo = Component => props => useMemo(
+  () => Component(props),
+  Object.keys(props).map(key => props[key])
+);
+
+const App = component(() => {
+  const [tick, updateTick] = useState(0);
+
+  useEffect(() => {
+    const onTick = ts => {
+      updateTick(Math.round(performance.now()));
+      // window.onTick = onTick;
+      // requestAnimationFrame(onTick);
+      setTimeout(onTick, 1000);
+    }
+    onTick();
+  }, []);
+
+  TickContext.provide(tick);
+
+  return html`
+    ${Basket([
+      Fruit({label: "Apple"}),
+      FruitWithTick({label: "Banana"}),
+      Fruit({label: "Cherry"}),
+      FruitWithTick({label: "Donut"}),
+    ])}
+  `;
+});
+
+const Basket = component((children) => html`
+    <ul class="basket">
+      ${children.map(child => html`<li>${child}</li>`)}
+    </ul>
+`);
+
+const Fruit = memo(component(({label}) => html`
+  <div class="fruit">last render: ${Math.round(performance.now())} ${label}</div>
+`));
+
+const FruitWithTick = withTick(Fruit);
+
+//render
+render(document.getElementById("app"), App);
+
+  </script>
+</head>
+<body>
+  <div id="app"></div>
+</body>
+</html>

@@ -1990,42 +1990,9 @@ var neverland = (function (exports) {
       svg$1 = _hook.svg;
 
   var index = (function (fn) {
-    var index;
-    var counter = [];
-    var stack = [];
-
-    var reset = function reset() {
-      var i = index.current;
-
-      if (0 < i) {
-        if (stack.length < i) {
-          stack.splice(i);
-          counter.splice(i);
-        }
-
-        index.current = 0;
-      }
+    return function () {
+      return augmentor(fn).apply(this, arguments);
     };
-
-    var effect = function effect() {
-      return reset;
-    };
-
-    return augmentor(function () {
-      index = useRef(0);
-      var _index = index,
-          current = _index.current;
-      useEffect$1(effect);
-
-      if (current === stack.length) {
-        var cb = augmentor(fn);
-        stack.push(cb);
-        counter.push(cb);
-      }
-
-      if (stack[current] !== counter[current]) stack[current] = counter[current] = augmentor(fn);
-      return stack[index.current++].apply(this, arguments);
-    });
   });
 
   exports.default = index;
