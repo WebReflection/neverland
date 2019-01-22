@@ -25,7 +25,7 @@
   "license": "ISC",
   "dependencies": {
     "dom-augmentor": "^0.2.5",
-    "lighterhtml": "^0.5.0"
+    "lighterhtml": "^0.6.0"
   },
   "devDependencies": {
     "@babel/core": "^7.1.2",
