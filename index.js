@@ -573,6 +573,59 @@ var neverland = (function (exports) {
   }
 
   /*! (c) Andrea Giammarchi - ISC */
+  var self$2 = null ||
+  /* istanbul ignore next */
+  {};
+
+  try {
+    self$2.WeakMap = WeakMap;
+  } catch (WeakMap) {
+    // this could be better but 90% of the time
+    // it's everything developers need as fallback
+    self$2.WeakMap = function (id, Object) {
+
+      var dP = Object.defineProperty;
+      var hOP = Object.hasOwnProperty;
+      var proto = WeakMap.prototype;
+
+      proto.delete = function (key) {
+        return this.has(key) && delete key[this._];
+      };
+
+      proto.get = function (key) {
+        return this.has(key) ? key[this._] : void 0;
+      };
+
+      proto.has = function (key) {
+        return hOP.call(key, this._);
+      };
+
+      proto.set = function (key, value) {
+        dP(key, this._, {
+          configurable: true,
+          value: value
+        });
+        return this;
+      };
+
+      return WeakMap;
+
+      function WeakMap(iterable) {
+        dP(this, '_', {
+          value: '_@ungap/weakmap' + id++
+        });
+        if (iterable) iterable.forEach(add, this);
+      }
+
+      function add(pair) {
+        this.set(pair[0], pair[1]);
+      }
+    }(Math.random(), Object);
+  }
+
+  var WeakMap$1 = self$2.WeakMap;
+
+  /*! (c) Andrea Giammarchi - ISC */
   var templateLiteral = function () {
 
     var RAW = 'raw';
@@ -727,14 +780,14 @@ var neverland = (function (exports) {
   }(document);
 
   /*! (c) Andrea Giammarchi - ISC */
-  var self$2 = null ||
+  var self$3 = null ||
   /* istanbul ignore next */
   {};
 
   try {
-    self$2.Map = Map;
+    self$3.Map = Map;
   } catch (Map) {
-    self$2.Map = function Map() {
+    self$3.Map = function Map() {
       var i = 0;
       var k = [];
       var v = [];
@@ -768,7 +821,7 @@ var neverland = (function (exports) {
     };
   }
 
-  var Map$1 = self$2.Map;
+  var Map$1 = self$3.Map;
 
   var append = function append(get, parent, children, start, end, before) {
     if (end - start < 2) parent.insertBefore(get(children[start], 1), before);else {
@@ -1141,59 +1194,6 @@ var neverland = (function (exports) {
     smartDiff(get, parentNode, futureNodes, futureStart, futureEnd, futureChanges, currentNodes, currentStart, currentEnd, currentChanges, currentLength, compare, before);
     return futureNodes;
   };
-
-  /*! (c) Andrea Giammarchi - ISC */
-  var self$3 = null ||
-  /* istanbul ignore next */
-  {};
-
-  try {
-    self$3.WeakMap = WeakMap;
-  } catch (WeakMap) {
-    // this could be better but 90% of the time
-    // it's everything developers need as fallback
-    self$3.WeakMap = function (id, Object) {
-
-      var dP = Object.defineProperty;
-      var hOP = Object.hasOwnProperty;
-      var proto = WeakMap.prototype;
-
-      proto.delete = function (key) {
-        return this.has(key) && delete key[this._];
-      };
-
-      proto.get = function (key) {
-        return this.has(key) ? key[this._] : void 0;
-      };
-
-      proto.has = function (key) {
-        return hOP.call(key, this._);
-      };
-
-      proto.set = function (key, value) {
-        dP(key, this._, {
-          configurable: true,
-          value: value
-        });
-        return this;
-      };
-
-      return WeakMap;
-
-      function WeakMap(iterable) {
-        dP(this, '_', {
-          value: '_@ungap/weakmap' + id++
-        });
-        if (iterable) iterable.forEach(add, this);
-      }
-
-      function add(pair) {
-        this.set(pair[0], pair[1]);
-      }
-    }(Math.random(), Object);
-  }
-
-  var WeakMap$1 = self$3.WeakMap;
 
   /*! (c) Andrea Giammarchi - ISC */
   var importNode = function (document, appendChild, cloneNode, createTextNode, importNode) {
@@ -1832,8 +1832,7 @@ var neverland = (function (exports) {
     return callback(this);
   }
 
-  var wm = new WeakMap();
-  var templateType = 0;
+  var wm = new WeakMap$1();
   var current$1 = null; // can be used with any useRef hook
   // returns an `html` and `svg` function
 
@@ -1872,8 +1871,9 @@ var neverland = (function (exports) {
 
     function content() {
       var args = [];
+      var length = arguments.length;
 
-      for (var i = 0, length = arguments.length; i < length; i++) {
+      for (var i = 0; i < length; i++) {
         args[i] = arguments[i];
       }
 
@@ -1885,16 +1885,10 @@ var neverland = (function (exports) {
     }
   }
 
-  function outer$1($) {
+  function outer$1(type) {
     return function () {
-      var _ = tta.apply(null, arguments);
-
-      return current$1 ? {
-        nodeType: 0,
-        valueOf: valueOf,
-        $: $,
-        _: _
-      } : new Tagger($).apply(null, _);
+      var args = tta.apply(null, arguments);
+      return current$1 ? new Hole(type, args) : new Tagger(type).apply(null, args);
     };
   }
 
@@ -1903,87 +1897,36 @@ var neverland = (function (exports) {
       i: 0,
       length: 0,
       stack: [],
-      template: null
+      update: false
     };
     wm.set(node, info);
     return info;
   }
 
-  function setTemplate(template) {
-    if (current$1.template) {
-      current$1.length = 0;
-      current$1.stack.splice(0);
-    }
-
-    current$1.template = template;
-  }
-
-  function unroll(template) {
-    var $ = template.$,
-        _ = template._;
-    var _current = current$1,
-        i = _current.i,
-        length = _current.length,
-        stack = _current.stack;
-    current$1.i++;
-
-    if (i < length) {
-      var _stack$i = stack[i],
-          tagger = _stack$i.tagger,
-          wire = _stack$i.wire;
-      tagger.apply(null, unrollArray(_, 1));
-      return wire;
-    } else {
-      var _tagger = new Tagger($);
-
-      var stacked = {
-        tagger: _tagger,
-        wire: null
-      };
-      current$1.length = stack.push(stacked);
-      stacked.wire = wireContent(_tagger.apply(null, unrollArray(_, 1)));
-      return stacked.wire;
-    }
-  }
-
-  function unrollArray(array, i) {
-    for (var _i = 0, length = array.length; _i < length; _i++) {
-      var value = array[_i];
-
-      if (value) {
-        if (value.nodeType === 0) array[_i] = unroll(value);else if (isArray(value)) array[_i] = unrollArray(value, 0);
-      }
-    }
-
-    return array;
-  }
-
   function update(reference, callback) {
     var prev = current$1;
     current$1 = wm.get(reference) || set$2(reference);
-    current$1.i = 0; // TODO: perf measurement about guarding this
-
+    current$1.i = 0;
     var result = callback.call(this);
     var ret = null;
 
-    if (result.nodeType === templateType) {
-      var template = result._[0]; // TODO: perf measurement about guarding this
+    if (result instanceof Hole) {
+      var value = unroll(result);
+      var _current = current$1,
+          i = _current.i,
+          length = _current.length,
+          stack = _current.stack;
 
-      var content = unroll(result);
-      var _current2 = current$1,
-          i = _current2.i;
-
-      if (i < current$1.length) {
+      if (i < length) {
         current$1.length = i;
-        current$1.stack.splice(i);
+        stack.splice(i);
       }
 
-      if (current$1.template !== template) {
-        setTemplate(template);
-        ret = asNode$1(content);
+      if (current$1.update) {
+        current$1.update = false;
+        ret = asNode$1(value);
       }
     } else {
-      setTemplate(null);
       ret = asNode$1(result);
     }
 
@@ -1991,10 +1934,68 @@ var neverland = (function (exports) {
     return ret;
   }
 
-  function wireContent(node) {
+  function unroll(hole) {
+    var _current2 = current$1,
+        i = _current2.i,
+        length = _current2.length,
+        stack = _current2.stack;
+    var type = hole.type,
+        args = hole.args;
+    var stacked = i < length;
+    current$1.i++;
+    unrollArray(args, 1);
+
+    if (stacked) {
+      var _stack$i = stack[i],
+          _tagger = _stack$i.tagger,
+          tpl = _stack$i.tpl,
+          kind = _stack$i.kind,
+          wire = _stack$i.wire;
+
+      if (type === kind && tpl === args[0]) {
+        _tagger.apply(null, args);
+
+        return wire;
+      }
+    }
+
+    var tagger = new Tagger(type);
+    var info = {
+      tagger: tagger,
+      tpl: args[0],
+      kind: type,
+      wire: wiredContent(tagger.apply(null, args))
+    };
+    if (stacked) stack[i] = info;else current$1.length = stack.push(info);
+    if (i < 1) current$1.update = true;
+    return info.wire;
+  }
+
+  function unrollArray(arr, i) {
+    for (var length = arr.length; i < length; i++) {
+      var value = arr[i];
+
+      if (value) {
+        if (value instanceof Hole) {
+          arr[i] = unroll(value);
+        } else if (isArray(value)) {
+          arr[i] = unrollArray(value, 0);
+        }
+      }
+    }
+
+    return arr;
+  }
+
+  function wiredContent(node) {
     var childNodes = node.childNodes;
     var length = childNodes.length;
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
+  }
+
+  function Hole(type, args) {
+    this.type = type;
+    this.args = args;
   }
 
   var _hook = hook(useRef),
