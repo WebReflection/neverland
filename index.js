@@ -248,37 +248,42 @@ var neverland = (function (exports) {
       i: 0,
       stack: stack
     };
-    runner[id$2] = state;
 
-    var reset = function reset() {
+    var drop = function drop(current$$1, clean, raf, t) {
+      if (raf && t) cancel(t);else if (clean) clean();
+      set$1(current$$1, null);
+    };
+
+    runner[id$2] = state;
+    runner.before.push(function () {
+      state.i = 0;
+    });
+    runner.reset.push(function () {
       state.i = 0;
 
       for (var length = stack.length, i = 0; i < length; i++) {
-        var _stack$i = stack[i],
-            check = _stack$i.check,
-            clean = _stack$i.clean,
-            raf = _stack$i.raf,
-            t = _stack$i.t;
-
-        if (check) {
-          if (raf && t) cancel(t);else if (clean) clean();
-          set$1(stack[i], null);
-        }
+        var _current = stack[i];
+        var check = _current.check,
+            clean = _current.clean,
+            raf = _current.raf,
+            t = _current.t;
+        if (check) drop(_current, clean, raf, t);
       }
-    };
-
-    runner.reset.push(reset);
-    runner.before.push(reset);
+    });
     runner.after.push(function () {
       for (var length = stack.length, i = 0; i < length; i++) {
-        var _current = stack[i];
-        var fn = _current.fn,
-            raf = _current.raf,
-            update = _current.update;
+        var _current2 = stack[i];
+        var check = _current2.check,
+            clean = _current2.clean,
+            fn = _current2.fn,
+            raf = _current2.raf,
+            t = _current2.t,
+            update = _current2.update;
 
-        if (update) {
-          _current.update = false;
-          if (raf) _current.t = request(fn);else fn();
+        if (check && update) {
+          _current2.update = false;
+          drop(_current2, clean, raf, t);
+          if (raf) _current2.t = request(fn);else fn();
         }
       }
     });
