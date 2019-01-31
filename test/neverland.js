@@ -63,8 +63,8 @@ var neverland = (function (exports) {
   };
   var empty = [];
   var setup = [];
-  var $ = function $(value) {
-    return typeof(value) === typeof($) ? value() : value;
+  var $ = function $(value, args) {
+    return typeof(value) === typeof($) ? value.apply(null, args) : value;
   };
   var diff = function diff(a, b) {
     return a.length !== b.length || a.some(diverse, b);
@@ -304,7 +304,7 @@ var neverland = (function (exports) {
         current: null
       };
       stack.push(info);
-      info.current = $(value);
+      info.current = $(value, empty);
     }
 
     return stack[i];
@@ -362,7 +362,7 @@ var neverland = (function (exports) {
         update();
       }];
       stack.push(info);
-      info[0] = $(value);
+      info[0] = $(value, empty);
     }
 
     return stack[i];
@@ -370,7 +370,7 @@ var neverland = (function (exports) {
 
   var state = (function (value) {
     return useReducer(function (_, value) {
-      return value;
+      return $(value, [_]);
     }, value);
   });
 
