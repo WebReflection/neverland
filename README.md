@@ -1,6 +1,6 @@
 # Neverland 🌈🦄
 
-[![Greenkeeper badge](https://badges.greenkeeper.io/WebReflection/neverland.svg)](https://greenkeeper.io/)
+[![Build Status](https://travis-ci.com/WebReflection/neverland.svg?branch=master)](https://travis-ci.com/WebReflection/neverland) [![Greenkeeper badge](https://badges.greenkeeper.io/WebReflection/neverland.svg)](https://greenkeeper.io/)
 
 ![Cosmic Timetraveler](img/cosmic-timetraveler-unsplash-1080.jpg)
 <sup>**Photo by [Cosmic Timetraveler](https://unsplash.com/photos/1rmtbFGjIBs?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText) on [Unsplash](https://unsplash.com/search/photos/island?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)**</sup>
