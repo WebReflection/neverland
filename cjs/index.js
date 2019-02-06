@@ -15,9 +15,20 @@ const {
 const {render, hook} = require('lighterhtml');
 const {html, svg} = hook(useRef);
 
-Object.defineProperty(exports, '__esModule', {value: true}).default = fn => function () {		
-  return augmentor(fn).apply(this, arguments);
-};
+Object.defineProperty(exports, '__esModule', {value: true}).default = fn => augmentor(function () {
+  const {current: info} = useRef({i: 0, $: []});
+  const {i, $} = info;
+  useEffect(() => {
+    const {i, $} = info;
+    if (i > $.length)
+      $.splice(i);
+    info.i = 0;
+  });
+  info.i++;
+  if (i === $.length)
+    $.push(augmentor(fn));
+  return $[i].apply(this, arguments);
+});
 
 exports.render = render;
 exports.html = html;

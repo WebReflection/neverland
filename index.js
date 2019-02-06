@@ -2018,9 +2018,25 @@ var neverland = (function (exports) {
       svg$1 = _hook.svg;
 
   var index = (function (fn) {
-    return function () {
-      return augmentor(fn).apply(this, arguments);
-    };
+    return augmentor(function () {
+      var _useRef = useRef({
+        i: 0,
+        $: []
+      }),
+          info = _useRef.current;
+
+      var i = info.i,
+          $ = info.$;
+      useEffect$1(function () {
+        var i = info.i,
+            $ = info.$;
+        if (i > $.length) $.splice(i);
+        info.i = 0;
+      });
+      info.i++;
+      if (i === $.length) $.push(augmentor(fn));
+      return $[i].apply(this, arguments);
+    });
   });
 
   exports.default = index;
