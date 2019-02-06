@@ -1870,31 +1870,41 @@ var neverland = (function (exports) {
   function createHook(useRef, view) {
     return function () {
       var ref = useRef(null);
-      if (ref.current === null) ref.current = content.bind(ref);
-      return ref.current.apply(null, arguments);
+      if (ref.current === null) ref.current = view.for(ref);
+      return asNode$1(ref.current.apply(null, arguments));
     };
-
-    function content() {
-      var args = [];
-      var length = arguments.length;
-
-      for (var i = 0; i < length; i++) {
-        args[i] = arguments[i];
-      }
-
-      var content = update(this, function () {
-        return view.apply(null, args);
-      });
-      if (content) this.content = content;
-      return this.content;
-    }
   }
 
   function outer$1(type) {
-    return function () {
+    var wm = new WeakMap$1();
+
+    tag.for = function (identity, id) {
+      var ref = wm.get(identity) || set(identity);
+      if (id == null) id = '$';
+      return ref[id] || create(ref, id);
+    };
+
+    return tag;
+
+    function create(ref, id) {
+      var wire = null;
+      var $ = new Tagger(type);
+      return ref[id] = function () {
+        var result = $.apply(null, tta.apply(null, arguments));
+        return wire || (wire = wiredContent(result));
+      };
+    }
+
+    function set(identity) {
+      var ref = {};
+      wm.set(identity, ref);
+      return ref;
+    }
+
+    function tag() {
       var args = tta.apply(null, arguments);
       return current$1 ? new Hole(type, args) : new Tagger(type).apply(null, args);
-    };
+    }
   }
 
   function set$2(node) {
