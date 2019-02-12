@@ -1679,24 +1679,23 @@ var neverland = (function (exports) {
     //    so that you can style=${{width: 120}}. In this case, the behavior has been
     //    fully inspired by Preact library and its simplicity.
     attribute: function attribute(node, name, original) {
-      var isSVG = OWNER_SVG_ELEMENT in node;
+      switch (name) {
+        case 'class':
+          name = 'className';
 
-      switch (true) {
-        case name.slice(0, 2) === 'on':
-          return hyperEvent(node, name);
-
-        case name === 'style':
-          return hyperStyle(node, original, isSVG);
-
-        case name === 'ref':
-          return hyperRef(node, original, isSVG);
-
-        case name === 'data':
-        case name === 'props':
-        case !isSVG && name in node && !readOnly.test(name):
+        case 'data':
+        case 'props':
           return hyperProperty(node, name);
 
+        case 'style':
+          return hyperStyle(node, original, OWNER_SVG_ELEMENT in node);
+
+        case 'ref':
+          return hyperRef(node);
+
         default:
+          if (name.slice(0, 2) === 'on') return hyperEvent(node, name);
+          if (name in node && !(OWNER_SVG_ELEMENT in node || readOnly.test(name))) return hyperProperty(node, name);
           return hyperAttribute(node, original.cloneNode(true));
       }
     },
@@ -1850,15 +1849,11 @@ var neverland = (function (exports) {
   }; // generic content render
 
   function render(node, callback) {
-    var _update$call = update.call(this, node, callback),
-        forced = _update$call.forced,
-        value = _update$call.value;
+    var value = update.call(this, node, callback);
 
-    var prev = container.get(node);
-
-    if (forced || prev !== value) {
+    if (container.get(node) !== value) {
       container.set(node, value);
-      appendClean(node, asNode$1(value, true));
+      appendClean(node, value);
     }
 
     return node;
@@ -1906,7 +1901,9 @@ var neverland = (function (exports) {
     }
 
     function set(identity) {
-      var ref = {};
+      var ref = {
+        '$': null
+      };
       wm.set(identity, ref);
       return ref;
     }
@@ -1932,34 +1929,27 @@ var neverland = (function (exports) {
     var prev = current$1;
     current$1 = wm.get(reference) || set$2(reference);
     current$1.i = 0;
-    var ret = {
-      forced: false,
-      value: callback.call(this)
-    };
+    var ret = callback.call(this);
+    var value;
 
-    if (ret.value instanceof Hole) {
-      ret.value = unroll(ret.value);
+    if (ret instanceof Hole) {
+      value = asNode$1(unroll(ret, 0), current$1.update);
       var _current = current$1,
           i = _current.i,
           length = _current.length,
-          stack = _current.stack;
-
-      if (i < length) {
-        current$1.length = i;
-        stack.splice(i);
-      }
-
-      if (current$1.update) {
-        current$1.update = false;
-        ret.forced = true;
-      }
+          stack = _current.stack,
+          _update = _current.update;
+      if (i < length) stack.splice(current$1.length = i);
+      if (_update) current$1.update = false;
+    } else {
+      value = asNode$1(ret, false);
     }
 
     current$1 = prev;
-    return ret;
+    return value;
   }
 
-  function unroll(hole) {
+  function unroll(hole, level) {
     var _current2 = current$1,
         i = _current2.i,
         length = _current2.length,
@@ -1968,43 +1958,50 @@ var neverland = (function (exports) {
         args = hole.args;
     var stacked = i < length;
     current$1.i++;
-    unrollArray(args, 1);
+    if (!stacked) current$1.length = stack.push({
+      l: level,
+      kind: type,
+      tag: null,
+      tpl: args[0],
+      wire: null
+    });
+    unrollArray(args, 1, level + 1);
+    var info = stack[i];
 
     if (stacked) {
-      var _stack$i = stack[i],
-          _tagger = _stack$i.tagger,
-          tpl = _stack$i.tpl,
-          kind = _stack$i.kind,
-          wire = _stack$i.wire;
+      var control = info.l,
+          kind = info.kind,
+          _tag = info.tag,
+          tpl = info.tpl,
+          _wire = info.wire;
 
-      if (type === kind && tpl === args[0]) {
-        _tagger.apply(null, args);
+      if (control === level && type === kind && tpl === args[0]) {
+        _tag.apply(null, args);
 
-        return wire;
+        return _wire;
       }
     }
 
-    var tagger = new Tagger(type);
-    var info = {
-      tagger: tagger,
-      tpl: args[0],
-      kind: type,
-      wire: wiredContent(tagger.apply(null, args))
-    };
-    if (stacked) stack[i] = info;else current$1.length = stack.push(info);
+    var tag = new Tagger(type);
+    var wire = wiredContent(tag.apply(null, args));
+    info.l = level;
+    info.kind = type;
+    info.tag = tag;
+    info.tpl = args[0];
+    info.wire = wire;
     if (i < 1) current$1.update = true;
-    return info.wire;
+    return wire;
   }
 
-  function unrollArray(arr, i) {
+  function unrollArray(arr, i, level) {
     for (var length = arr.length; i < length; i++) {
       var value = arr[i];
 
-      if (value) {
+      if (typeof(value) === 'object' && value) {
         if (value instanceof Hole) {
-          arr[i] = unroll(value);
+          arr[i] = unroll(value, level - 1);
         } else if (isArray(value)) {
-          arr[i] = unrollArray(value, 0);
+          arr[i] = unrollArray(value, 0, level++);
         }
       }
     }
