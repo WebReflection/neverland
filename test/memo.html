@@ -7,36 +7,37 @@
   <title>DOM Augmentor</title>
   <script src="../index.js"></script>
   <script defer type="module">
-const {createContext, useContext, useEffect, useMemo, useState, html, render} = window.neverland;
-const component = window.neverland.default;
+
+const {createContext, useContext, useEffect, useMemo, useState, html, render} = neverland;
+const component = neverland.default;
 
 const TickContext = createContext();
 
-const withTick = Component => props => {
+const withTick = (child => props => {
   const tick = useContext(TickContext);
-  return Component(Object.assign({}, props, {tick}));
-};
+  
+  return child(Object.assign({}, props, {tick}));
+});
 
-const memo = Component => props => useMemo(
-  () => Component(props),
-  Object.keys(props).map(key => props[key])
-);
+const memo = (child => props => {
+  return useMemo(() => child(props), Object.keys(props).map(key => props[key]));
+});
 
+//Component tree
 const App = component(() => {
   const [tick, updateTick] = useState(0);
-
+  
+  TickContext.provide(tick);
+  
   useEffect(() => {
     const onTick = ts => {
       updateTick(Math.round(performance.now()));
-      // window.onTick = onTick;
-      // requestAnimationFrame(onTick);
-      setTimeout(onTick, 1000);
+      requestAnimationFrame(onTick);
     }
     onTick();
+    
   }, []);
-
-  TickContext.provide(tick);
-
+  
   return html`
     ${Basket([
       Fruit({label: "Apple"}),
@@ -47,15 +48,15 @@ const App = component(() => {
   `;
 });
 
-const Basket = component((children) => html`
+const Basket = ((children) => html`
     <ul class="basket">
       ${children.map(child => html`<li>${child}</li>`)}
     </ul>
 `);
 
-const Fruit = memo(component(({label}) => html`
+const Fruit =  component(memo((({label}) => html`
   <div class="fruit">last render: ${Math.round(performance.now())} ${label}</div>
-`));
+`)));
 
 const FruitWithTick = withTick(Fruit);
 
