@@ -23,6 +23,13 @@
   ],
   "author": "Andrea Giammarchi",
   "license": "ISC",
+  "greenkeeper": {
+    "ignore": [
+      "rollup",
+      "rollup-plugin-babel",
+      "rollup-plugin-node-resolve"
+    ]
+  },
   "dependencies": {
     "dom-augmentor": "^0.2.8",
     "lighterhtml": "^0.12.0"
