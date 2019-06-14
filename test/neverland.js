@@ -35,8 +35,8 @@ var neverland = (function (exports) {
         return all.get(this).set(value, 1), this;
       };
 
-      proto.delete = function (value) {
-        return all.get(this).delete(value);
+      proto["delete"] = function (value) {
+        return all.get(this)["delete"](value);
       };
 
       proto.has = function (value) {
@@ -81,9 +81,9 @@ var neverland = (function (exports) {
       });
     };
   };
-  var id$1 = 0;
+  var id = 0;
   var uid = function uid() {
-    return '_$' + id$1++;
+    return '_$' + id++;
   };
   var unstacked = function unstacked(id) {
     var _now = now,
@@ -172,7 +172,7 @@ var neverland = (function (exports) {
     return value !== this[i];
   }
 
-  var id$2 = uid();
+  var id$1 = uid();
   var cancel, request;
 
   try {
@@ -194,7 +194,7 @@ var neverland = (function (exports) {
       t: 0,
       update: check,
       fn: function fn() {
-        set$1(stack[i], info.cb());
+        set(stack[i], info.cb());
       }
     };
     return info;
@@ -202,7 +202,7 @@ var neverland = (function (exports) {
 
   var effect = function effect(raf) {
     return function (cb, refs) {
-      var _unstacked = unstacked(id$2),
+      var _unstacked = unstacked(id$1),
           i = _unstacked.i,
           stack = _unstacked.stack,
           unknown = _unstacked.unknown;
@@ -237,7 +237,7 @@ var neverland = (function (exports) {
     };
   };
 
-  var set$1 = function set(info, clean) {
+  var set = function set(info, clean) {
     info.t = 0;
     info.clean = clean;
   };
@@ -249,12 +249,12 @@ var neverland = (function (exports) {
       stack: stack
     };
 
-    var drop = function drop(current$$1, clean, raf, t) {
+    var drop = function drop(current, clean, raf, t) {
       if (raf && t) cancel(t);else if (clean) clean();
-      set$1(current$$1, null);
+      set(current, null);
     };
 
-    runner[id$2] = state;
+    runner[id$1] = state;
     runner.before.push(function () {
       state.i = 0;
     });
@@ -291,10 +291,10 @@ var neverland = (function (exports) {
   var useEffect = effect(true);
   var useLayoutEffect = effect(false);
 
-  var id$3 = uid();
-  setup.push(stacked(id$3));
+  var id$2 = uid();
+  setup.push(stacked(id$2));
   var useRef = (function (value) {
-    var _unstacked = unstacked(id$3),
+    var _unstacked = unstacked(id$2),
         i = _unstacked.i,
         stack = _unstacked.stack,
         unknown = _unstacked.unknown;
@@ -310,10 +310,10 @@ var neverland = (function (exports) {
     return stack[i];
   });
 
-  var id$4 = uid();
-  setup.push(stacked(id$4));
+  var id$3 = uid();
+  setup.push(stacked(id$3));
   var useMemo = (function (callback, refs) {
-    var _unstacked = unstacked(id$4),
+    var _unstacked = unstacked(id$3),
         i = _unstacked.i,
         stack = _unstacked.stack,
         unknown = _unstacked.unknown;
@@ -346,10 +346,10 @@ var neverland = (function (exports) {
     }, inputs);
   });
 
-  var id$5 = uid();
-  setup.push(stacked(id$5));
+  var id$4 = uid();
+  setup.push(stacked(id$4));
   var useReducer = (function (reducer, value) {
-    var _unstacked = unstacked(id$5),
+    var _unstacked = unstacked(id$4),
         i = _unstacked.i,
         stack = _unstacked.stack,
         unknown = _unstacked.unknown,
@@ -375,8 +375,8 @@ var neverland = (function (exports) {
   });
 
   var all = new WeakMap();
-  var id$6 = uid();
-  setup.push(stacked(id$6));
+  var id$5 = uid();
+  setup.push(stacked(id$5));
   var createContext = function createContext(value) {
     var context = {
       value: value,
@@ -386,7 +386,7 @@ var neverland = (function (exports) {
     return context;
   };
   var useContext = function useContext(context) {
-    var _unstacked = unstacked(id$6),
+    var _unstacked = unstacked(id$5),
         i = _unstacked.i,
         stack = _unstacked.stack,
         unknown = _unstacked.unknown,
@@ -413,15 +413,14 @@ var neverland = (function (exports) {
   /*! (c) Andrea Giammarchi */
   function disconnected(poly) {
 
-    var CONNECTED = 'connected';
-    var DISCONNECTED = 'dis' + CONNECTED;
     var Event = poly.Event;
     var WeakSet = poly.WeakSet;
     var notObserving = true;
-    var observer = new WeakSet();
+    var observer = null;
     return function observe(node) {
       if (notObserving) {
         notObserving = !notObserving;
+        observer = new WeakSet();
         startObserving(node.ownerDocument);
       }
 
@@ -430,7 +429,8 @@ var neverland = (function (exports) {
     };
 
     function startObserving(document) {
-      var dispatched = null;
+      var connected = new WeakSet();
+      var disconnected = new WeakSet();
 
       try {
         new MutationObserver(changes).observe(document, {
@@ -464,26 +464,22 @@ var neverland = (function (exports) {
       }
 
       function changes(records) {
-        dispatched = new Tracker();
-
         for (var record, length = records.length, i = 0; i < length; i++) {
           record = records[i];
-          dispatchAll(record.removedNodes, DISCONNECTED, CONNECTED);
-          dispatchAll(record.addedNodes, CONNECTED, DISCONNECTED);
-        }
-
-        dispatched = null;
-      }
-
-      function dispatchAll(nodes, type, counter) {
-        for (var node, event = new Event(type), length = nodes.length, i = 0; i < length; (node = nodes[i++]).nodeType === 1 && dispatchTarget(node, event, type, counter)) {
+          dispatchAll(record.removedNodes, 'disconnected', disconnected, connected);
+          dispatchAll(record.addedNodes, 'connected', connected, disconnected);
         }
       }
 
-      function dispatchTarget(node, event, type, counter) {
-        if (observer.has(node) && !dispatched[type].has(node)) {
-          dispatched[counter].delete(node);
-          dispatched[type].add(node);
+      function dispatchAll(nodes, type, wsin, wsout) {
+        for (var node, event = new Event(type), length = nodes.length, i = 0; i < length; (node = nodes[i++]).nodeType === 1 && dispatchTarget(node, event, type, wsin, wsout)) {
+        }
+      }
+
+      function dispatchTarget(node, event, type, wsin, wsout) {
+        if (observer.has(node) && !wsin.has(node)) {
+          wsout["delete"](node);
+          wsin.add(node);
           node.dispatchEvent(event);
           /*
           // The event is not bubbling (perf reason: should it?),
@@ -502,13 +498,8 @@ var neverland = (function (exports) {
 
         for (var // apparently is node.children || IE11 ... ^_^;;
         // https://github.com/WebReflection/disconnected/issues/1
-        children = node.children || [], length = children.length, i = 0; i < length; dispatchTarget(children[i++], event, type, counter)) {
+        children = node.children || [], length = children.length, i = 0; i < length; dispatchTarget(children[i++], event, type, wsin, wsout)) {
         }
-      }
-
-      function Tracker() {
-        this[CONNECTED] = new WeakSet();
-        this[DISCONNECTED] = new WeakSet();
       }
     }
   }
@@ -553,7 +544,7 @@ var neverland = (function (exports) {
     }
   };
 
-  var useEffect$1 = function useEffect$$1(fn, inputs) {
+  var useEffect$1 = function useEffect$1(fn, inputs) {
     var args = [fn];
     if (inputs) // if the inputs is an empty array
       // observe the returned element for connect/disconnect events
@@ -593,7 +584,7 @@ var neverland = (function (exports) {
       var hOP = Object.hasOwnProperty;
       var proto = WeakMap.prototype;
 
-      proto.delete = function (key) {
+      proto["delete"] = function (key) {
         return this.has(key) && delete key[this._];
       };
 
@@ -630,44 +621,61 @@ var neverland = (function (exports) {
 
   var WeakMap$1 = self$2.WeakMap;
 
-  /*! (c) Andrea Giammarchi - ISC */
-  var templateLiteral = function () {
+  var isNoOp = (typeof document === "undefined" ? "undefined" : typeof(document)) !== 'object';
 
+  var _templateLiteral = function templateLiteral(tl) {
     var RAW = 'raw';
-    var isNoOp = (typeof document === "undefined" ? "undefined" : typeof(document)) !== 'object';
 
-    var _templateLiteral = function templateLiteral(tl) {
-      if ( // for badly transpiled literals
-      !(RAW in tl) || // for some version of TypeScript
-      tl.propertyIsEnumerable(RAW) || // and some other version of TypeScript
-      !Object.isFrozen(tl[RAW]) || // or for Firefox < 55
-      /Firefox\/(\d+)/.test((document.defaultView.navigator || {}).userAgent) && parseFloat(RegExp.$1) < 55) {
-        var forever = {};
-
-        _templateLiteral = function templateLiteral(tl) {
-          for (var key = '.', i = 0; i < tl.length; i++) {
-            key += tl[i].length + '.' + tl[i];
-          }
-
-          return forever[key] || (forever[key] = tl);
-        };
-      } else {
-        isNoOp = true;
-      }
-
-      return TL(tl);
+    var isBroken = function isBroken(UA) {
+      return /(Firefox|Safari)\/(\d+)/.test(UA) && !/(Chrom|Android)\/(\d+)/.test(UA);
     };
 
-    return TL;
+    var broken = isBroken((document.defaultView.navigator || {}).userAgent);
+    var FTS = !(RAW in tl) || tl.propertyIsEnumerable(RAW) || !Object.isFrozen(tl[RAW]);
 
-    function TL(tl) {
-      return isNoOp ? tl : _templateLiteral(tl);
+    if (broken || FTS) {
+      var forever = {};
+
+      var foreverCache = function foreverCache(tl) {
+        for (var key = '.', i = 0; i < tl.length; i++) {
+          key += tl[i].length + '.' + tl[i];
+        }
+
+        return forever[key] || (forever[key] = tl);
+      }; // Fallback TypeScript shenanigans
+
+
+      if (FTS) _templateLiteral = foreverCache; // try fast path for other browsers:
+      // store the template as WeakMap key
+      // and forever cache it only when it's not there.
+      // this way performance is still optimal,
+      // penalized only when there are GC issues
+      else {
+          var wm = new WeakMap$1();
+
+          var set = function set(tl, unique) {
+            wm.set(tl, unique);
+            return unique;
+          };
+
+          _templateLiteral = function templateLiteral(tl) {
+            return wm.get(tl) || set(tl, foreverCache(tl));
+          };
+        }
+    } else {
+      isNoOp = true;
     }
-  }();
+
+    return TL(tl);
+  };
+
+  function TL(tl) {
+    return isNoOp ? tl : _templateLiteral(tl);
+  }
 
   function tta (template) {
     var length = arguments.length;
-    var args = [templateLiteral(template)];
+    var args = [TL(template)];
     var i = 1;
 
     while (i < length) {
@@ -797,7 +805,7 @@ var neverland = (function (exports) {
       var k = [];
       var v = [];
       return {
-        delete: function _delete(key) {
+        "delete": function _delete(key) {
           var had = contains(key);
 
           if (had) {
@@ -1202,13 +1210,14 @@ var neverland = (function (exports) {
 
   /*! (c) Andrea Giammarchi - ISC */
   var importNode = function (document, appendChild, cloneNode, createTextNode, importNode) {
-    var native = importNode in document; // IE 11 has problems with cloning templates:
+    var _native = importNode in document; // IE 11 has problems with cloning templates:
     // it "forgets" empty childNodes. This feature-detects that.
+
 
     var fragment = document.createDocumentFragment();
     fragment[appendChild](document[createTextNode]('g'));
     fragment[appendChild](document[createTextNode](''));
-    var content = native ? document[importNode](fragment, true) : fragment[cloneNode](true);
+    var content = _native ? document[importNode](fragment, true) : fragment[cloneNode](true);
     return content.childNodes.length < 2 ? function importNode(node, deep) {
       var clone = node[cloneNode]();
 
@@ -1217,7 +1226,7 @@ var neverland = (function (exports) {
       }
 
       return clone;
-    } : native ? document[importNode] : function (node, deep) {
+    } : _native ? document[importNode] : function (node, deep) {
       return node[cloneNode](!!deep);
     };
   }(document, 'appendChild', 'cloneNode', 'createTextNode', 'importNode');
@@ -1226,14 +1235,20 @@ var neverland = (function (exports) {
     return String(this).replace(/^\s+|\s+/g, '');
   };
 
+  /*! (c) Andrea Giammarchi - ISC */
   // Custom
   var UID = '-' + Math.random().toFixed(6) + '%'; //                           Edge issue!
 
-  if (!function (template, content, tabindex) {
-    return content in template && (template.innerHTML = '<p ' + tabindex + '="' + UID + '"></p>', template[content].childNodes[0].getAttribute(tabindex) == UID);
-  }(document.createElement('template'), 'content', 'tabindex')) {
-    UID = '_dt: ' + UID.slice(1, -1) + ';';
-  }
+  var UID_IE = false;
+
+  try {
+    if (!function (template, content, tabindex) {
+      return content in template && (template.innerHTML = '<p ' + tabindex + '="' + UID + '"></p>', template[content].childNodes[0].getAttribute(tabindex) == UID);
+    }(document.createElement('template'), 'content', 'tabindex')) {
+      UID = '_dt: ' + UID.slice(1, -1) + ';';
+      UID_IE = true;
+    }
+  } catch (meh) {}
 
   var UIDC = '<!--' + UID + '-->'; // DOM
 
@@ -1243,16 +1258,17 @@ var neverland = (function (exports) {
   var SHOULD_USE_TEXT_CONTENT = /^(?:style|textarea)$/i;
   var VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
 
+  /*! (c) Andrea Giammarchi - ISC */
   function sanitize (template) {
     return template.join(UIDC).replace(selfClosing, fullClosing).replace(attrSeeker, attrReplacer);
   }
   var spaces = ' \\f\\n\\r\\t';
-  var almostEverything = '[^ ' + spaces + '\\/>"\'=]+';
-  var attrName = '[ ' + spaces + ']+' + almostEverything;
+  var almostEverything = '[^' + spaces + '\\/>"\'=]+';
+  var attrName = '[' + spaces + ']+' + almostEverything;
   var tagName = '<([A-Za-z]+[A-Za-z0-9:_-]*)((?:';
-  var attrPartials = '(?:\\s*=\\s*(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything + '))?)';
-  var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([ ' + spaces + ']*/?>)', 'g');
-  var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([ ' + spaces + ']*/>)', 'g');
+  var attrPartials = '(?:\\s*=\\s*(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything.replace('\\/', '') + '))?)';
+  var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([' + spaces + ']*/?>)', 'g');
+  var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([' + spaces + ']*/>)', 'g');
   var findAttributes = new RegExp('(' + attrName + '\\s*=\\s*)([\'"]?)' + UIDC + '\\2', 'gi');
 
   function attrReplacer($0, $1, $2, $3) {
@@ -1303,12 +1319,25 @@ var neverland = (function (exports) {
           break;
 
         case COMMENT_NODE:
-          if (child.textContent === UID) {
+          var textContent = child.textContent;
+
+          if (textContent === UID) {
             parts.shift();
             holes.push( // basicHTML or other non standard engines
             // might end up having comments in nodes
             // where they shouldn't, hence this check.
             SHOULD_USE_TEXT_CONTENT.test(node.nodeName) ? create$2('text', node, path) : create$2('any', child, path.concat(i)));
+          } else {
+            switch (textContent.slice(0, 2)) {
+              case '/*':
+                if (textContent.slice(-2) !== '*/') break;
+
+              case "\uD83D\uDC7B":
+                // ghost
+                node.removeChild(child);
+                i--;
+                length--;
+            }
           }
 
           break;
@@ -1590,9 +1619,10 @@ var neverland = (function (exports) {
   }; // generic attributes helpers
 
 
-  var hyperAttribute = function hyperAttribute(node, attribute) {
+  var hyperAttribute = function hyperAttribute(node, original) {
     var oldValue;
     var owner = false;
+    var attribute = original.cloneNode(true);
     return function (newValue) {
       if (oldValue !== newValue) {
         oldValue = newValue;
@@ -1640,11 +1670,11 @@ var neverland = (function (exports) {
         oldValue = newValue;
 
         if (node[name] !== newValue) {
-          node[name] = newValue;
-
           if (newValue == null) {
+            // cleanup before dropping the attribute to fix IE/Edge gotcha
+            node[name] = '';
             node.removeAttribute(name);
-          }
+          } else node[name] = newValue;
         }
       }
     };
@@ -1654,6 +1684,12 @@ var neverland = (function (exports) {
   var hyperRef = function hyperRef(node) {
     return function (ref) {
       ref.current = node;
+    };
+  };
+
+  var hyperSetter = function hyperSetter(node, name) {
+    return function (value) {
+      node[name] = value;
     };
   }; // list of attributes that should not be directly assigned
 
@@ -1681,6 +1717,7 @@ var neverland = (function (exports) {
     attribute: function attribute(node, name, original) {
       switch (name) {
         case 'class':
+          if (OWNER_SVG_ELEMENT in node) return hyperAttribute(node, original);
           name = 'className';
 
         case 'data':
@@ -1694,9 +1731,10 @@ var neverland = (function (exports) {
           return hyperRef(node);
 
         default:
+          if (name.slice(0, 1) === '.') return hyperSetter(node, name.slice(1));
           if (name.slice(0, 2) === 'on') return hyperEvent(node, name);
           if (name in node && !(OWNER_SVG_ELEMENT in node || readOnly.test(name))) return hyperProperty(node, name);
-          return hyperAttribute(node, original.cloneNode(true));
+          return hyperAttribute(node, original);
       }
     },
     // in a hyper(node)`<div>${content}</div>` case
@@ -1860,8 +1898,8 @@ var neverland = (function (exports) {
   } // keyed render via render(node, () => html`...`)
   // non keyed renders in the wild via html`...`
 
-  var html = outer$1('html');
-  var svg = outer$1('svg'); // - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  var html = outer('html');
+  var svg = outer('svg'); // an indirect exposure of a domtagger capability
 
   function appendClean(node, fragment) {
     node.textContent = '';
@@ -1875,15 +1913,15 @@ var neverland = (function (exports) {
   function createHook(useRef, view) {
     return function () {
       var ref = useRef(null);
-      if (ref.current === null) ref.current = view.for(ref);
+      if (ref.current === null) ref.current = view["for"](ref);
       return asNode$1(ref.current.apply(null, arguments), false);
     };
   }
 
-  function outer$1(type) {
+  function outer(type) {
     var wm = new WeakMap$1();
 
-    tag.for = function (identity, id) {
+    tag["for"] = function (identity, id) {
       var ref = wm.get(identity) || set(identity);
       if (id == null) id = '$';
       return ref[id] || create(ref, id);
@@ -1892,10 +1930,17 @@ var neverland = (function (exports) {
     return tag;
 
     function create(ref, id) {
+      var args = [];
       var wire = null;
-      var $ = new Tagger(type);
+      var tagger = new Tagger(type);
+
+      var callback = function callback() {
+        return tagger.apply(null, unrollArray(args, 1, 1));
+      };
+
       return ref[id] = function () {
-        var result = $.apply(null, tta.apply(null, arguments));
+        args = tta.apply(null, arguments);
+        var result = update(tagger, callback);
         return wire || (wire = wiredContent(result));
       };
     }
@@ -1914,7 +1959,7 @@ var neverland = (function (exports) {
     }
   }
 
-  function set$2(node) {
+  function set$1(node) {
     var info = {
       i: 0,
       length: 0,
@@ -1927,7 +1972,7 @@ var neverland = (function (exports) {
 
   function update(reference, callback) {
     var prev = current$1;
-    current$1 = wm.get(reference) || set$2(reference);
+    current$1 = wm.get(reference) || set$1(reference);
     current$1.i = 0;
     var ret = callback.call(this);
     var value;
@@ -2015,6 +2060,7 @@ var neverland = (function (exports) {
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
   }
 
+  Object.freeze(Hole);
   function Hole(type, args) {
     this.type = type;
     this.args = args;
@@ -2046,11 +2092,11 @@ var neverland = (function (exports) {
     });
   });
 
-  exports.default = index;
-  exports.render = render;
-  exports.html = html$1;
-  exports.svg = svg$1;
   exports.createContext = createContext;
+  exports.default = index;
+  exports.html = html$1;
+  exports.render = render;
+  exports.svg = svg$1;
   exports.useCallback = callback;
   exports.useContext = useContext;
   exports.useEffect = useEffect$1;
