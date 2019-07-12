@@ -5,11 +5,20 @@
 ![Cosmic Timetraveler](img/cosmic-timetraveler-unsplash-1080.jpg)
 <sup>**Photo by [Cosmic Timetraveler](https://unsplash.com/photos/1rmtbFGjIBs?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText) on [Unsplash](https://unsplash.com/search/photos/island?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)**</sup>
 
+## Check haunted out !!!
+
+Project [haunted](https://github.com/matthewp/haunted/tree/a88c42958459428270c1993547e0a415cd76f152#lighterhtml-etc) finally goes library agnostic, and you can use _lighterhtml_ as your hooked engine 🎉
+
+- - -
+
 ## Warning
 
 This project simply puts together [lighterhtml](https://github.com/WebReflection/lighterhtml) and [dom-augmentor](https://github.com/WebReflection/dom-augmentor) in few lines of code, but all bugs are likely related to [augmentor](https://github.com/WebReflection/augmentor) or its [dom-augmentor](https://github.com/WebReflection/dom-augmentor) wrap, which are projects I am struggling to actively maintain, 'cause I don't use hooks much but I am also wokring on [🔥 heresy 🔥](https://github.com/WebReflection/heresy) and its [SSR](https://github.com/WebReflection/heresy-ssr) coutner part.
 
+**Use [haunted](https://github.com/matthewp/haunted/tree/a88c42958459428270c1993547e0a415cd76f152#lighterhtml-etc) instead.**
+
 _TL;DR_ this project is currently not maintained because there are better toys in town. I am not deprecating this 'cause one day I might work on it again and fix all issues, but until that day you've been informed on the current state.
+
 
 ## Experimental Hooks for lighterhtml
 
