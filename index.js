@@ -736,6 +736,12 @@ var neverland = (function (exports) {
 
   var isArray = Array.isArray;
   var wireType = Wire.prototype.nodeType;
+  Object.freeze(Hole);
+
+  function Hole(type, args) {
+    this.type = type;
+    this.args = args;
+  }
 
   /*! (c) Andrea Giammarchi - ISC */
   var createContent = function (document) {
@@ -815,6 +821,11 @@ var neverland = (function (exports) {
 
           return had;
         },
+        forEach: function forEach(callback, context) {
+          k.forEach(function (key, i) {
+            callback.call(context, v[i], key, this);
+          }, this);
+        },
         get: function get(key) {
           return contains(key) ? v[i] : void 0;
         },
@@ -837,15 +848,17 @@ var neverland = (function (exports) {
   var Map$1 = self$3.Map;
 
   var append = function append(get, parent, children, start, end, before) {
-    if (end - start < 2) parent.insertBefore(get(children[start], 1), before);else {
-      var fragment = parent.ownerDocument.createDocumentFragment();
+    var isSelect = 'selectedIndex' in parent;
+    var selectedIndex = -1;
 
-      while (start < end) {
-        fragment.appendChild(get(children[start++], 1));
-      }
-
-      parent.insertBefore(fragment, before);
+    while (start < end) {
+      var child = get(children[start], 1);
+      if (isSelect && selectedIndex < 0 && child.selected) selectedIndex = start;
+      parent.insertBefore(child, before);
+      start++;
     }
+
+    if (isSelect && -1 < selectedIndex) parent.selectedIndex = selectedIndex;
   };
   var eqeq = function eqeq(a, b) {
     return a == b;
@@ -1265,7 +1278,7 @@ var neverland = (function (exports) {
   var spaces = ' \\f\\n\\r\\t';
   var almostEverything = '[^' + spaces + '\\/>"\'=]+';
   var attrName = '[' + spaces + ']+' + almostEverything;
-  var tagName = '<([A-Za-z]+[A-Za-z0-9:_-]*)((?:';
+  var tagName = '<([A-Za-z]+[A-Za-z0-9:._-]*)((?:';
   var attrPartials = '(?:\\s*=\\s*(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything.replace('\\/', '') + '))?)';
   var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([' + spaces + ']*/?>)', 'g');
   var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([' + spaces + ']*/>)', 'g');
@@ -1281,15 +1294,6 @@ var neverland = (function (exports) {
 
   function fullClosing($0, $1, $2) {
     return VOID_ELEMENTS.test($1) ? $0 : '<' + $1 + $2 + '></' + $1 + '>';
-  }
-
-  function create$2(type, node, path, name) {
-    return {
-      name: name,
-      node: node,
-      path: path,
-      type: type
-    };
   }
 
   function find$1(node, path) {
@@ -1326,7 +1330,7 @@ var neverland = (function (exports) {
             holes.push( // basicHTML or other non standard engines
             // might end up having comments in nodes
             // where they shouldn't, hence this check.
-            SHOULD_USE_TEXT_CONTENT.test(node.nodeName) ? create$2('text', node, path) : create$2('any', child, path.concat(i)));
+            SHOULD_USE_TEXT_CONTENT.test(node.nodeName) ? Text(node, path) : Any(child, path.concat(i)));
           } else {
             switch (textContent.slice(0, 2)) {
               case '/*':
@@ -1351,7 +1355,7 @@ var neverland = (function (exports) {
           /* istanbul ignore if */
           if (SHOULD_USE_TEXT_CONTENT.test(node.nodeName) && trim.call(child.textContent) === UIDC) {
             parts.shift();
-            holes.push(create$2('text', node, path));
+            holes.push(Text(node, path));
           }
 
           break;
@@ -1371,22 +1375,32 @@ var neverland = (function (exports) {
 
     while (i < length) {
       var attribute = array[i++];
+      var direct = attribute.value === UID;
+      var sparse;
 
-      if (attribute.value === UID) {
+      if (direct || 1 < (sparse = attribute.value.split(UIDC)).length) {
         var name = attribute.name; // the following ignore is covered by IE
         // and the IE9 double viewBox test
 
         /* istanbul ignore else */
 
         if (!cache.has(name)) {
-          var realName = parts.shift().replace(/^(?:|[\S\s]*?\s)(\S+?)\s*=\s*['"]?$/, '$1');
+          var realName = parts.shift().replace(direct ? /^(?:|[\S\s]*?\s)(\S+?)\s*=\s*('|")?$/ : new RegExp('^(?:|[\\S\\s]*?\\s)(' + name + ')\\s*=\\s*(\'|")', 'i'), '$1');
           var value = attributes[realName] || // the following ignore is covered by browsers
           // while basicHTML is already case-sensitive
 
           /* istanbul ignore next */
           attributes[realName.toLowerCase()];
           cache.set(name, value);
-          holes.push(create$2('attr', value, path, realName));
+          if (direct) holes.push(Attr(value, path, realName, null));else {
+            var skip = sparse.length - 2;
+
+            while (skip--) {
+              parts.shift();
+            }
+
+            holes.push(Attr(value, path, realName, sparse));
+          }
         }
 
         remove.push(attribute);
@@ -1430,6 +1444,32 @@ var neverland = (function (exports) {
     }
   }
 
+  function Any(node, path) {
+    return {
+      type: 'any',
+      node: node,
+      path: path
+    };
+  }
+
+  function Attr(node, path, name, sparse) {
+    return {
+      type: 'attr',
+      node: node,
+      path: path,
+      name: name,
+      sparse: sparse
+    };
+  }
+
+  function Text(node, path) {
+    return {
+      type: 'text',
+      node: node,
+      path: path
+    };
+  }
+
   // globals
   var parsed = new WeakMap$1();
   var referenced = new WeakMap$1();
@@ -1445,9 +1485,10 @@ var neverland = (function (exports) {
     var info = {
       content: content,
       updates: function updates(content) {
-        var callbacks = [];
+        var updates = [];
         var len = holes.length;
         var i = 0;
+        var off = 0;
 
         while (i < len) {
           var info = holes[i++];
@@ -1455,31 +1496,65 @@ var neverland = (function (exports) {
 
           switch (info.type) {
             case 'any':
-              callbacks.push(options.any(node, []));
+              updates.push({
+                fn: options.any(node, []),
+                sparse: false
+              });
               break;
 
             case 'attr':
-              callbacks.push(options.attribute(node, info.name, info.node));
+              var sparse = info.sparse;
+              var fn = options.attribute(node, info.name, info.node);
+              if (sparse === null) updates.push({
+                fn: fn,
+                sparse: false
+              });else {
+                off += sparse.length - 2;
+                updates.push({
+                  fn: fn,
+                  sparse: true,
+                  values: sparse
+                });
+              }
               break;
 
             case 'text':
-              callbacks.push(options.text(node));
+              updates.push({
+                fn: options.text(node),
+                sparse: false
+              });
               node.textContent = '';
               break;
           }
         }
 
+        len += off;
         return function () {
           var length = arguments.length;
-          var values = length - 1;
-          var i = 1;
 
-          if (len !== values) {
-            throw new Error(values + ' values instead of ' + len + '\n' + template.join(', '));
+          if (len !== length - 1) {
+            throw new Error(length - 1 + ' values instead of ' + len + '\n' + template.join('${value}'));
           }
 
+          var i = 1;
+          var off = 1;
+
           while (i < length) {
-            callbacks[i - 1](arguments[i++]);
+            var update = updates[i - off];
+
+            if (update.sparse) {
+              var values = update.values;
+              var value = values[0];
+              var j = 1;
+              var l = values.length;
+              off += l - 2;
+
+              while (j < l) {
+                value += arguments[i++] + values[j++];
+              }
+
+              update.fn(value);
+            } else update.fn(arguments[i++]);
           }
 
           return content;
@@ -1876,30 +1951,36 @@ var neverland = (function (exports) {
 
   var wm = new WeakMap$1();
   var container = new WeakMap$1();
-  var current$1 = null; // can be used with any useRef hook
-  // returns an `html` and `svg` function
+  var current$1 = null;
 
-  var hook = function hook(useRef) {
+  var lighterhtml = function lighterhtml(Tagger) {
+    var html = outer('html', Tagger);
+    var svg = outer('svg', Tagger);
     return {
-      html: createHook(useRef, html),
-      svg: createHook(useRef, svg)
+      html: html,
+      svg: svg,
+      hook: function hook(useRef) {
+        return {
+          html: createHook(useRef, html),
+          svg: createHook(useRef, svg)
+        };
+      },
+      render: function render(node, callback) {
+        var value = update.call(this, node, callback, Tagger);
+
+        if (container.get(node) !== value) {
+          container.set(node, value);
+          appendClean(node, value);
+        }
+
+        return node;
+      }
     };
-  }; // generic content render
+  };
 
-  function render(node, callback) {
-    var value = update.call(this, node, callback);
-
-    if (container.get(node) !== value) {
-      container.set(node, value);
-      appendClean(node, value);
-    }
-
-    return node;
-  } // keyed render via render(node, () => html`...`)
-  // non keyed renders in the wild via html`...`
-
-  var html = outer('html');
-  var svg = outer('svg'); // an indirect exposure of a domtagger capability
+  var _lighterhtml = lighterhtml(Tagger),
+      render = _lighterhtml.render,
+      hook = _lighterhtml.hook;
 
   function appendClean(node, fragment) {
     node.textContent = '';
@@ -1918,7 +1999,7 @@ var neverland = (function (exports) {
     };
   }
 
-  function outer(type) {
+  function outer(type, Tagger) {
     var wm = new WeakMap$1();
 
     tag["for"] = function (identity, id) {
@@ -1935,12 +2016,12 @@ var neverland = (function (exports) {
       var tagger = new Tagger(type);
 
       var callback = function callback() {
-        return tagger.apply(null, unrollArray(args, 1, 1));
+        return tagger.apply(null, unrollArray(args, 1, 1, Tagger));
       };
 
       return ref[id] = function () {
         args = tta.apply(null, arguments);
-        var result = update(tagger, callback);
+        var result = update(tagger, callback, Tagger);
         return wire || (wire = wiredContent(result));
       };
     }
@@ -1970,7 +2051,7 @@ var neverland = (function (exports) {
     return info;
   }
 
-  function update(reference, callback) {
+  function update(reference, callback, Tagger) {
     var prev = current$1;
     current$1 = wm.get(reference) || set$1(reference);
     current$1.i = 0;
@@ -1978,7 +2059,7 @@ var neverland = (function (exports) {
     var value;
 
     if (ret instanceof Hole) {
-      value = asNode$1(unroll(ret, 0), current$1.update);
+      value = asNode$1(unroll(ret, 0, Tagger), current$1.update);
       var _current = current$1,
           i = _current.i,
           length = _current.length,
@@ -1994,7 +2075,7 @@ var neverland = (function (exports) {
     return value;
   }
 
-  function unroll(hole, level) {
+  function unroll(hole, level, Tagger) {
     var _current2 = current$1,
         i = _current2.i,
         length = _current2.length,
@@ -2010,7 +2091,7 @@ var neverland = (function (exports) {
       tpl: args[0],
       wire: null
     });
-    unrollArray(args, 1, level + 1);
+    unrollArray(args, 1, level + 1, Tagger);
     var info = stack[i];
 
     if (stacked) {
@@ -2038,15 +2119,15 @@ var neverland = (function (exports) {
     return wire;
   }
 
-  function unrollArray(arr, i, level) {
+  function unrollArray(arr, i, level, Tagger) {
     for (var length = arr.length; i < length; i++) {
       var value = arr[i];
 
       if (typeof(value) === 'object' && value) {
         if (value instanceof Hole) {
-          arr[i] = unroll(value, level - 1);
+          arr[i] = unroll(value, level - 1, Tagger);
         } else if (isArray(value)) {
-          arr[i] = unrollArray(value, 0, level++);
+          arr[i] = unrollArray(value, 0, level++, Tagger);
         }
       }
     }
@@ -2060,15 +2141,9 @@ var neverland = (function (exports) {
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
   }
 
-  Object.freeze(Hole);
-  function Hole(type, args) {
-    this.type = type;
-    this.args = args;
-  }
-
   var _hook = hook(useRef),
-      html$1 = _hook.html,
-      svg$1 = _hook.svg;
+      html = _hook.html,
+      svg = _hook.svg;
 
   var index = (function (fn) {
     return augmentor(function () {
@@ -2094,9 +2169,9 @@ var neverland = (function (exports) {
 
   exports.createContext = createContext;
   exports.default = index;
-  exports.html = html$1;
+  exports.html = html;
   exports.render = render;
-  exports.svg = svg$1;
+  exports.svg = svg;
   exports.useCallback = callback;
   exports.useContext = useContext;
   exports.useEffect = useEffect$1;
