@@ -32,18 +32,18 @@
   },
   "dependencies": {
     "dom-augmentor": "^0.3.1",
-    "lighterhtml": "^1.0.0"
+    "lighterhtml": "^1.2.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.1.2",
-    "@babel/preset-env": "^7.1.0",
-    "ascjs": "^3.0.0",
-    "drop-babel-typeof": "^1.0.1",
+    "@babel/core": "^7.6.0",
+    "@babel/preset-env": "^7.6.0",
+    "ascjs": "^3.0.1",
+    "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.11.1",
-    "nightmare": "^3.0.1",
-    "rollup": "^1.10.0",
-    "rollup-plugin-babel": "^4.3.2",
-    "rollup-plugin-node-resolve": "^5.0.0",
+    "nightmare": "^3.0.2",
+    "rollup": "^1.21.4",
+    "rollup-plugin-babel": "^4.3.3",
+    "rollup-plugin-node-resolve": "^5.2.0",
     "uglify-es": "^3.3.9"
   },
   "repository": {
