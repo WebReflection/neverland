@@ -12,6 +12,7 @@ export {render, html, svg, useRef};
 export {
   useState,
   useEffect,
+  useContext, createContext,
   useReducer,
   useCallback,
   useMemo,

@@ -248,6 +248,48 @@ var neverland = (function (exports) {
     }];
   };
 
+  var hooks = new WeakMap();
+
+  var invoke$1 = function invoke(_ref) {
+    var hook = _ref.hook,
+        args = _ref.args;
+    hook.apply(null, args);
+  };
+
+  var createContext = function createContext(value) {
+    var context = {
+      value: value,
+      provide: provide
+    };
+    hooks.set(context, []);
+    return context;
+  };
+  var useContext = function useContext(context) {
+    var _current = current(),
+        hook = _current.hook,
+        args = _current.args;
+
+    var stack = hooks.get(context);
+    var info = {
+      hook: hook,
+      args: args
+    };
+    if (!stack.some(update, info)) stack.push(info);
+    return context.value;
+  };
+
+  function provide(value) {
+    if (this.value !== value) {
+      this.value = value;
+      hooks.get(this).forEach(invoke$1);
+    }
+  }
+
+  function update(_ref2) {
+    var hook = _ref2.hook;
+    return hook === this.hook;
+  }
+
   /*! (c) Andrea Giammarchi - ISC */
   var effects = new WeakMap();
 
@@ -1796,7 +1838,7 @@ var neverland = (function (exports) {
                     break;
 
                   case 'function':
-                    anyContent(value.map(invoke$1, node));
+                    anyContent(value.map(invoke$2, node));
                     break;
 
                   case 'object':
@@ -1862,7 +1904,7 @@ var neverland = (function (exports) {
     }
   };
 
-  function invoke$1(callback) {
+  function invoke$2(callback) {
     return callback(this);
   }
 
@@ -1883,7 +1925,7 @@ var neverland = (function (exports) {
         };
       },
       render: function render(node, callback) {
-        var value = update.call(this, node, callback, Tagger);
+        var value = update$1.call(this, node, callback, Tagger);
 
         if (container.get(node) !== value) {
           container.set(node, value);
@@ -1938,7 +1980,7 @@ var neverland = (function (exports) {
 
       return ref[id] = function () {
         args = tta.apply(null, arguments);
-        var result = update(tagger, callback, Tagger);
+        var result = update$1(tagger, callback, Tagger);
         return wire || (wire = wiredContent(result));
       };
     }
@@ -1968,7 +2010,7 @@ var neverland = (function (exports) {
     return info;
   }
 
-  function update(reference, callback, Tagger) {
+  function update$1(reference, callback, Tagger) {
     var prev = current$1;
     current$1 = wm.get(reference) || set$1(reference);
     current$1.i = 0;
@@ -2068,11 +2110,13 @@ var neverland = (function (exports) {
     };
   };
 
+  exports.createContext = createContext;
   exports.html = html;
   exports.neverland = neverland;
   exports.render = render;
   exports.svg = svg;
   exports.useCallback = useCallback;
+  exports.useContext = useContext;
   exports.useEffect = useEffect;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;

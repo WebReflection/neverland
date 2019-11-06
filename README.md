@@ -46,6 +46,7 @@ Both `html` and `svg` renders are exposed via the `neverland` module, and you ca
   * **Basic Hooks**
     * [useState](https://reactjs.org/docs/hooks-reference.html#usestate)
     * [useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect)
+    * [useContext](https://reactjs.org/docs/hooks-reference.html#usecontext), which can be defined via `createContext(value)`
   * **Additional Hooks**
     * [useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer)
     * [useCallback](https://reactjs.org/docs/hooks-reference.html#usecallback)
@@ -55,9 +56,9 @@ Both `html` and `svg` renders are exposed via the `neverland` module, and you ca
 
 
 
-#### About `useImperativeMethods` and `createContext`
+#### About `useImperativeMethods`
 
-These hooks are strictly _React_ oriented with no meaning in current _dom-augmentor_ world.
+This hook is strictly _React_ oriented with no meaning in current _dom-augmentor_ world.
 
 
 
