@@ -1915,13 +1915,19 @@ var neverland = (function (exports) {
   var lighterhtml = function lighterhtml(Tagger) {
     var html = outer('html', Tagger);
     var svg = outer('svg', Tagger);
+    var inner = {
+      html: innerTag('html', Tagger, true),
+      svg: innerTag('svg', Tagger, true)
+    };
     return {
       html: html,
       svg: svg,
+      inner: inner,
       hook: function hook(useRef) {
         return {
           html: createHook(useRef, html),
-          svg: createHook(useRef, svg)
+          svg: createHook(useRef, svg),
+          inner: inner
         };
       },
       render: function render(node, callback) {
@@ -1958,8 +1964,16 @@ var neverland = (function (exports) {
     };
   }
 
+  function innerTag(type, Tagger, hole) {
+    return function () {
+      var args = tta.apply(null, arguments);
+      return hole || current$1 ? new Hole(type, args) : new Tagger(type).apply(null, args);
+    };
+  }
+
   function outer(type, Tagger) {
     var wm = new WeakMap$1();
+    var tag = innerTag(type, Tagger, false);
 
     tag["for"] = function (identity, id) {
       var ref = wm.get(identity) || set(identity);
@@ -1991,11 +2005,6 @@ var neverland = (function (exports) {
       };
       wm.set(identity, ref);
       return ref;
-    }
-
-    function tag() {
-      var args = tta.apply(null, arguments);
-      return current$1 ? new Hole(type, args) : new Tagger(type).apply(null, args);
     }
   }
 
@@ -2102,7 +2111,8 @@ var neverland = (function (exports) {
 
   var _hook = hook(useRef),
       html = _hook.html,
-      svg = _hook.svg;
+      svg = _hook.svg,
+      inner = _hook.inner;
 
   var neverland = function neverland(fn) {
     return function () {
@@ -2112,6 +2122,7 @@ var neverland = (function (exports) {
 
   exports.createContext = createContext;
   exports.html = html;
+  exports.inner = inner;
   exports.neverland = neverland;
   exports.render = render;
   exports.svg = svg;

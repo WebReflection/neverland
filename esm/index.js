@@ -1,13 +1,13 @@
 import {augmentor, useRef} from 'dom-augmentor';
 
 import {render, hook} from 'lighterhtml';
-const {html, svg} = hook(useRef);
+const {html, svg, inner} = hook(useRef);
 
 export const neverland = fn => function () {
   return augmentor(fn).apply(null, arguments);
 };
 
-export {render, html, svg, useRef};
+export {render, html, svg, inner, useRef};
 
 export {
   useState,

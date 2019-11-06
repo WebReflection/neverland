@@ -32,7 +32,7 @@ As [React Hooks](https://reactjs.org/docs/hooks-intro.html) were born to simplif
 ## V2 Breaking Changes
 
   * there is no default exported, but `neverland` named export
-  * the usage of `html` or `svg` must be **once per component**. You [cannot use references within loops](https://inventingwithmonster.io/20190207-break-the-rules-of-react-hooks/#running-hooks-within-a-loop) so define components for inner loops instead.
+  * the usage of `html` or `svg` must be **once per component**. You [cannot use references within loops](https://inventingwithmonster.io/20190207-break-the-rules-of-react-hooks/#running-hooks-within-a-loop) so define components for inner loops instead, or use the new `inner` export, to create `inner.html` calls, instead of `html` calls, as example, within the component.
   * there are still more DOM trashes than desired, but it works, and the DX is awesome, as well as performance anyway 😊
 
 

@@ -2,7 +2,7 @@
 const {augmentor, useRef} = require('dom-augmentor');
 
 const {render, hook} = require('lighterhtml');
-const {html, svg} = hook(useRef);
+const {html, svg, inner} = hook(useRef);
 
 const neverland = fn => function () {
   return augmentor(fn).apply(null, arguments);
@@ -12,6 +12,7 @@ exports.neverland = neverland;
 exports.render = render;
 exports.html = html;
 exports.svg = svg;
+exports.inner = inner;
 exports.useRef = useRef;
 
 (m => {
