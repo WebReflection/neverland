@@ -5,27 +5,14 @@
 ![Cosmic Timetraveler](img/cosmic-timetraveler-unsplash-1080.jpg)
 <sup>**Photo by [Cosmic Timetraveler](https://unsplash.com/photos/1rmtbFGjIBs?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText) on [Unsplash](https://unsplash.com/search/photos/island?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)**</sup>
 
-## Check haunted out !!!
-
-Project [haunted](https://github.com/matthewp/haunted/tree/a88c42958459428270c1993547e0a415cd76f152#lighterhtml-etc) finally goes library agnostic, and you can use _lighterhtml_ as your hooked engine 🎉
-
 - - -
-
-## Warning
-
-This project simply puts together [lighterhtml](https://github.com/WebReflection/lighterhtml) and [dom-augmentor](https://github.com/WebReflection/dom-augmentor) in few lines of code, but all bugs are likely related to [augmentor](https://github.com/WebReflection/augmentor) or its [dom-augmentor](https://github.com/WebReflection/dom-augmentor) wrap, which are projects I am struggling to actively maintain, 'cause I don't use hooks much but I am also wokring on [🔥 heresy 🔥](https://github.com/WebReflection/heresy) and its [SSR](https://github.com/WebReflection/heresy-ssr) coutner part.
-
-**Use [haunted](https://github.com/matthewp/haunted/tree/a88c42958459428270c1993547e0a415cd76f152#lighterhtml-etc) instead.**
-
-_TL;DR_ this project is currently not maintained because there are better toys in town. I am not deprecating this 'cause one day I might work on it again and fix all issues, but until that day you've been informed on the current state.
-
 
 ## Experimental Hooks for lighterhtml
 
 ```js
-import stardust, {render, html, useState} from 'neverland';
+import {neverland, render, html, useState} from 'neverland';
 
-const Counter = stardust(() => {
+const Counter = neverland(() => {
   const [count, setCount] = useState(0);
   return html`
   <button onclick=${() => setCount(count + 1)}>
@@ -50,13 +37,10 @@ Both `html` and `svg` renders are exposed via the `neverland` module, and you ca
 
 ### Available Hooks
 
-All hooks behave as close as possible to their _React_ counter part.
-
-  * Basic Hooks
+  * **Basic Hooks**
     * [useState](https://reactjs.org/docs/hooks-reference.html#usestate)
     * [useEffect](https://reactjs.org/docs/hooks-reference.html#useeffect)
-    * [useContext](https://reactjs.org/docs/hooks-reference.html#usecontext) **experimental**
-  * Additional Hooks
+  * **Additional Hooks**
     * [useReducer](https://reactjs.org/docs/hooks-reference.html#usereducer)
     * [useCallback](https://reactjs.org/docs/hooks-reference.html#usecallback)
     * [useMemo](https://reactjs.org/docs/hooks-reference.html#usememo)
@@ -64,9 +48,17 @@ All hooks behave as close as possible to their _React_ counter part.
     * [useLayoutEffect](https://reactjs.org/docs/hooks-reference.html#uselayouteffect)
 
 
-#### About `useImperativeMethods`
 
-This hook is strictly _React_ oriented and it has no meaning in current _dom-augmentor_ world.
+#### About `useImperativeMethods` and `createContext`
+
+These hooks are strictly _React_ oriented with no meaning in current _dom-augmentor_ world.
+
+
+
+## Alternatives
+
+Project [haunted](https://github.com/matthewp/haunted/tree/a88c42958459428270c1993547e0a415cd76f152#lighterhtml-etc) finally goes library agnostic, and you can use _lighterhtml_ as your hooked engine 🎉
+
 
 
 ### How To ...
@@ -84,11 +76,11 @@ It is also possible to use it in browsers via https://unpkg.com/neverland:
 
 ```js
 // you can import it in any scope
-const {default:neverland, html, useState} = window.neverland;
+const {neverland, html, useState} = window.neverland;
 const VirtualComp = neverland(...);
 
 // or ...
-const {default:$, html} = neverland;
+const {neverland:$, html} = neverland;
 const VirtualComp = $(...);
 ```
 

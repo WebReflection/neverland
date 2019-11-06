@@ -3,8 +3,8 @@ addEventListener(
   () => {
 
     const {
-      default: MrSmee,  // alias as you prefer
-      html,             // svg too if you need it
+      neverland: MrSmee,  // alias as you prefer
+      html,               // svg too if you need it
       useEffect, useReducer, useRef, useState
     } = neverland;
 

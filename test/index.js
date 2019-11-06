@@ -27,15 +27,17 @@ nightmare
     }
   })
   .evaluate(() => {
-    const button = document.querySelectorAll('button');
-    assert(button.length === 6, 'expected amount of buttons');
-    button[0].click();
-    button[2].click();
-    button[3].click();
-    button[1].click();
-    button[4].click();
-    assert(window.log === 'Harrrrrrrr!!', 'onconnected worked as expected');
-    button[5].click();
+    setTimeout(() => {
+      const button = document.querySelectorAll('button');
+      assert(button.length === 6, 'expected amount of buttons');
+      button[0].click();
+      button[2].click();
+      button[3].click();
+      button[1].click();
+      button[4].click();
+      assert(window.log === 'Harrrrrrrr!!', 'onconnected worked as expected');
+      button[5].click();
+    }, 1000);
   })
   .end()
   .catch(exit);

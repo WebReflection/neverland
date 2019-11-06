@@ -55,361 +55,6 @@ var neverland = (function (exports) {
 
   var WeakSet$1 = self$1.WeakSet;
 
-  
-
-  var now = null;
-  var current = function current() {
-    return now;
-  };
-  var empty = [];
-  var setup = [];
-  var $ = function $(value, args) {
-    return typeof(value) === typeof($) ? value.apply(null, args) : value;
-  };
-  var diff = function diff(a, b) {
-    return a.length !== b.length || a.some(diverse, b);
-  };
-  var stacked = function stacked(id) {
-    return function (runner) {
-      var state = {
-        i: 0,
-        stack: []
-      };
-      runner[id] = state;
-      runner.before.push(function () {
-        state.i = 0;
-      });
-    };
-  };
-  var id = 0;
-  var uid = function uid() {
-    return '_$' + id++;
-  };
-  var unstacked = function unstacked(id) {
-    var _now = now,
-        state = _now[id],
-        update = _now.update;
-    var i = state.i,
-        stack = state.stack;
-    state.i++;
-    return {
-      i: i,
-      stack: stack,
-      update: update,
-      unknown: i === stack.length
-    };
-  };
-  var augmentor = (function (fn) {
-    var current = runner($);
-    each(setup, current);
-
-    $.reset = function () {
-      each(current.reset, current);
-
-      for (var key in current) {
-        if (/^_\$/.test(key)) current[key].stack.splice(0);
-      }
-    };
-
-    return $;
-
-    function $() {
-      var prev = now;
-      now = current;
-      var _ = current._,
-          before = current.before,
-          after = current.after,
-          external = current.external;
-
-      try {
-        var result;
-
-        do {
-          _.$ = _._ = false;
-          each(before, current);
-          result = fn.apply(_.c = this, _.a = arguments);
-          each(after, current);
-          if (external.length) each(external.splice(0), result);
-        } while (_._);
-
-        return result;
-      } finally {
-        _.$ = true;
-        now = prev;
-      }
-    }
-  });
-
-  var each = function each(arr, value) {
-    var length = arr.length;
-    var i = 0;
-
-    while (i < length) {
-      arr[i++](value);
-    }
-  };
-
-  var runner = function runner($) {
-    var _ = {
-      _: true,
-      $: true,
-      c: null,
-      a: null
-    };
-    return {
-      _: _,
-      before: [],
-      after: [],
-      external: [],
-      reset: [],
-      update: function update() {
-        return _.$ ? $.apply(_.c, _.a) : _._ = true;
-      }
-    };
-  };
-
-  function diverse(value, i) {
-    return value !== this[i];
-  }
-
-  var id$1 = uid();
-  var cancel, request;
-
-  try {
-    cancel = cancelAnimationFrame;
-    request = requestAnimationFrame;
-  } catch (o_O) {
-    cancel = clearTimeout;
-    request = setTimeout;
-  }
-
-  var create = function create(always, check, inputs, raf, cb, stack, i) {
-    var info = {
-      always: always,
-      cb: cb,
-      check: check,
-      clean: null,
-      inputs: inputs,
-      raf: raf,
-      t: 0,
-      update: check,
-      fn: function fn() {
-        set(stack[i], info.cb());
-      }
-    };
-    return info;
-  };
-
-  var effect = function effect(raf) {
-    return function (cb, refs) {
-      var _unstacked = unstacked(id$1),
-          i = _unstacked.i,
-          stack = _unstacked.stack,
-          unknown = _unstacked.unknown;
-
-      var comp = refs || empty;
-
-      if (unknown) {
-        var always = comp === empty;
-
-        var check = always || !raf || typeof(comp) !== typeof(effect);
-
-        if (always || !raf || typeof(comp) !== typeof(effect)) {
-          stack.push(create(always, check, comp, raf, cb, stack, i));
-        } else {
-          current().external.push(function (result) {
-            return refs(cb, result);
-          });
-          stack.push(create(always, always, empty, raf, effect, stack, i));
-        }
-      } else {
-        var info = stack[i];
-        var _check = info.check,
-            _always = info.always,
-            inputs = info.inputs;
-
-        if (_check && (_always || diff(inputs, comp))) {
-          info.cb = cb;
-          info.inputs = comp;
-          info.update = true;
-        }
-      }
-    };
-  };
-
-  var set = function set(info, clean) {
-    info.t = 0;
-    info.clean = clean;
-  };
-
-  setup.push(function (runner) {
-    var stack = [];
-    var state = {
-      i: 0,
-      stack: stack
-    };
-
-    var drop = function drop(current, clean, raf, t) {
-      if (raf && t) cancel(t);else if (clean) clean();
-      set(current, null);
-    };
-
-    runner[id$1] = state;
-    runner.before.push(function () {
-      state.i = 0;
-    });
-    runner.reset.push(function () {
-      state.i = 0;
-
-      for (var length = stack.length, i = 0; i < length; i++) {
-        var _current = stack[i];
-        var check = _current.check,
-            clean = _current.clean,
-            raf = _current.raf,
-            t = _current.t;
-        if (check) drop(_current, clean, raf, t);
-      }
-    });
-    runner.after.push(function () {
-      for (var length = stack.length, i = 0; i < length; i++) {
-        var _current2 = stack[i];
-        var check = _current2.check,
-            clean = _current2.clean,
-            fn = _current2.fn,
-            raf = _current2.raf,
-            t = _current2.t,
-            update = _current2.update;
-
-        if (check && update) {
-          _current2.update = false;
-          drop(_current2, clean, raf, t);
-          if (raf) _current2.t = request(fn);else fn();
-        }
-      }
-    });
-  });
-  var useEffect = effect(true);
-  var useLayoutEffect = effect(false);
-
-  var id$2 = uid();
-  setup.push(stacked(id$2));
-  var useRef = (function (value) {
-    var _unstacked = unstacked(id$2),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown;
-
-    if (unknown) {
-      var info = {
-        current: null
-      };
-      stack.push(info);
-      info.current = $(value, empty);
-    }
-
-    return stack[i];
-  });
-
-  var id$3 = uid();
-  setup.push(stacked(id$3));
-  var useMemo = (function (callback, refs) {
-    var _unstacked = unstacked(id$3),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown;
-
-    var comp = refs || empty;
-    if (unknown) create$1(stack, -1, callback, comp);
-    var _stack$i = stack[i],
-        filter = _stack$i.filter,
-        value = _stack$i.value,
-        fn = _stack$i.fn,
-        inputs = _stack$i.inputs;
-    return (filter ? diff(inputs, comp) : callback !== fn) ? create$1(stack, i, callback, comp) : value;
-  });
-
-  var create$1 = function create(stack, i, fn, inputs) {
-    var info = {
-      filter: inputs !== empty,
-      value: null,
-      fn: fn,
-      inputs: inputs
-    };
-    if (i < 0) stack.push(info);else stack[i] = info;
-    info.value = fn();
-    return info.value;
-  };
-
-  var callback = (function (fn, inputs) {
-    return useMemo(function () {
-      return fn;
-    }, inputs);
-  });
-
-  var id$4 = uid();
-  setup.push(stacked(id$4));
-  var useReducer = (function (reducer, value) {
-    var _unstacked = unstacked(id$4),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown,
-        update = _unstacked.update;
-
-    if (unknown) {
-      var info = [null, function (action) {
-        value = reducer(value, action);
-        info[0] = value;
-        update();
-      }];
-      stack.push(info);
-      info[0] = $(value, empty);
-    }
-
-    return stack[i];
-  });
-
-  var state = (function (value) {
-    return useReducer(function (_, value) {
-      return $(value, [_]);
-    }, value);
-  });
-
-  var all = new WeakMap();
-  var id$5 = uid();
-  setup.push(stacked(id$5));
-  var createContext = function createContext(value) {
-    var context = {
-      value: value,
-      provide: provide
-    };
-    all.set(context, []);
-    return context;
-  };
-  var useContext = function useContext(context) {
-    var _unstacked = unstacked(id$5),
-        i = _unstacked.i,
-        stack = _unstacked.stack,
-        unknown = _unstacked.unknown,
-        update = _unstacked.update;
-
-    if (unknown) {
-      all.get(context).push(update);
-      stack.push(context);
-    }
-
-    return stack[i].value;
-  };
-
-  function provide(value) {
-    if (this.value !== value) {
-      this.value = value;
-
-      for (var arr = all.get(this), length = arr.length, i = 0; i < length; i++) {
-        arr[i]();
-      }
-    }
-  }
-
   /*! (c) Andrea Giammarchi */
   function disconnected(poly) {
 
@@ -504,6 +149,263 @@ var neverland = (function (exports) {
     }
   }
 
+  /*! (c) Andrea Giammarchi - ISC */
+  var curr = null;
+
+  var invoke = function invoke(fn) {
+    fn();
+  };
+
+  var set = function set(wm, hook, stack) {
+    return wm.set(hook, stack), stack;
+  };
+
+  var current = function current() {
+    return curr;
+  };
+  var augmentor = function augmentor(fn) {
+    return function hook() {
+      var prev = curr;
+      var after = [];
+      var i = 0;
+      curr = {
+        hook: hook,
+        after: after,
+        args: arguments,
+
+        get index() {
+          return i++;
+        }
+
+      };
+
+      try {
+        return fn.apply(null, arguments);
+      } finally {
+        curr = prev;
+        after.forEach(invoke);
+      }
+    };
+  };
+  var getStack = function getStack(wm, hook) {
+    return wm.get(hook) || set(wm, hook, []);
+  };
+  function different(value, i) {
+    return value !== this[i];
+  }
+
+  var compat = typeof cancelAnimationFrame === 'function';
+  var cAF = compat ? cancelAnimationFrame : clearTimeout;
+  var rAF = compat ? requestAnimationFrame : setTimeout;
+  function reraf(limit) {
+    var force, timer, callback, self, args;
+    reset();
+    return function reschedule(_callback, _self, _args) {
+      callback = _callback;
+      self = _self;
+      args = _args;
+      if (!timer) timer = rAF(invoke);
+      if (--force < 0) stop(true);
+      return stop;
+    };
+
+    function invoke() {
+      reset();
+      callback.apply(self, args || []);
+    }
+
+    function reset() {
+      force = limit || Infinity;
+      timer = compat ? 0 : null;
+    }
+
+    function stop(flush) {
+      var didStop = !!timer;
+
+      if (didStop) {
+        cAF(timer);
+        if (flush) invoke();
+      }
+
+      return didStop;
+    }
+  }
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var states = new WeakMap();
+  var updateState = reraf();
+  var useState = function useState(value) {
+    var _current = current(),
+        hook = _current.hook,
+        args = _current.args,
+        index = _current.index;
+
+    var stack = getStack(states, hook);
+    if (stack.length <= index) stack[index] = value;
+    return [stack[index], function (value) {
+      stack[index] = value;
+      updateState(hook, null, args);
+    }];
+  };
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var effects = new WeakMap();
+
+  var stop = function stop() {};
+
+  var createEffect = function createEffect(sync) {
+    return function (effect, guards) {
+      var _current = current(),
+          hook = _current.hook,
+          after = _current.after,
+          index = _current.index;
+
+      var stack = getStack(effects, hook);
+
+      if (index < stack.length) {
+        var info = stack[index];
+        var clean = info.clean,
+            invoke = info.invoke,
+            update = info.update,
+            values = info.values;
+
+        if (!guards || guards.some(different, values)) {
+          info.values = guards;
+
+          if (clean) {
+            info.clean = null;
+            clean();
+          }
+
+          if (sync) after.push(invoke);else update(invoke);
+        }
+      } else {
+        var _invoke = function _invoke() {
+          _info.clean = effect();
+        };
+
+        var _update = reraf();
+
+        var _info = {
+          clean: null,
+          invoke: _invoke,
+          stop: stop,
+          update: _update,
+          values: guards
+        };
+        stack[index] = _info;
+        if (sync) after.push(_invoke);else _info.stop = _update(_invoke);
+      }
+    };
+  };
+
+  var useEffect = createEffect(false);
+  var useLayoutEffect = createEffect(true);
+  var dropEffect = function dropEffect(hook) {
+    getStack(effects, hook).forEach(function (info) {
+      var clean = info.clean,
+          stop = info.stop;
+      stop();
+
+      if (clean) {
+        info.clean = null;
+        clean();
+      }
+    });
+  };
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var memos = new WeakMap();
+  var useMemo = function useMemo(memo, guards) {
+    var _current = current(),
+        hook = _current.hook,
+        index = _current.index;
+
+    var stack = getStack(memos, hook);
+    if (!guards || stack.length <= index || guards.some(different, stack[index].values)) stack[index] = {
+      current: memo(),
+      values: guards
+    };
+    return stack[index].current;
+  };
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var useCallback = function useCallback(fn, guards) {
+    return useMemo(function () {
+      return fn;
+    }, guards);
+  };
+
+  
+
+  function _slicedToArray(arr, i) {
+    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
+  }
+
+  function _arrayWithHoles(arr) {
+    if (Array.isArray(arr)) return arr;
+  }
+
+  function _iterableToArrayLimit(arr, i) {
+    if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
+      return;
+    }
+
+    var _arr = [];
+    var _n = true;
+    var _d = false;
+    var _e = undefined;
+
+    try {
+      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
+        _arr.push(_s.value);
+
+        if (i && _arr.length === i) break;
+      }
+    } catch (err) {
+      _d = true;
+      _e = err;
+    } finally {
+      try {
+        if (!_n && _i["return"] != null) _i["return"]();
+      } finally {
+        if (_d) throw _e;
+      }
+    }
+
+    return _arr;
+  }
+
+  function _nonIterableRest() {
+    throw new TypeError("Invalid attempt to destructure non-iterable instance");
+  }
+
+  var useReducer = function useReducer(reducer, value, init) {
+    var _useState = useState(init ? init(value) : value),
+        _useState2 = _slicedToArray(_useState, 2),
+        state = _useState2[0],
+        update = _useState2[1];
+
+    return [state, function (value) {
+      update(reducer(state, value));
+    }];
+  };
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var refs = new WeakMap();
+  var useRef = function useRef(value) {
+    var _current = current(),
+        hook = _current.hook,
+        index = _current.index;
+
+    var stack = getStack(refs, hook);
+    return index < stack.length ? stack[index] : stack[index] = {
+      current: value
+    };
+  };
+
+  /*! (c) Andrea Giammarchi - ISC */
+
   var find = function find(node) {
     var childNodes = node.childNodes;
     var length = childNodes.length;
@@ -522,51 +424,29 @@ var neverland = (function (exports) {
     WeakSet: WeakSet$1
   });
 
-  var observer = function observer($, element) {
+  var observer = function observer(element, handler) {
     var nodeType = element.nodeType;
 
     if (nodeType) {
       var node = nodeType === 1 ? element : find(element);
       observe(node);
-      var handler = {
-        handleEvent: handleEvent,
-        onconnected: onconnected,
-        ondisconnected: ondisconnected,
-        $: $,
-        _: null
-      };
-      node.addEventListener('connected', handler, false);
       node.addEventListener('disconnected', handler, false);
     } else {
       var value = element.valueOf(); // give a chance to facades to return a reasonable value
 
-      if (value !== element) observer($, value);
+      if (value !== element) observer(value, handler);
     }
+
+    return element;
   };
 
-  var useEffect$1 = function useEffect$1(fn, inputs) {
-    var args = [fn];
-    if (inputs) // if the inputs is an empty array
-      // observe the returned element for connect/disconnect events
-      // and invoke effects/cleanup on these events only
-      args.push(inputs.length ? inputs : observer);
-    return useEffect.apply(null, args);
+  var augmentor$1 = function augmentor$1(fn) {
+    var hook = augmentor(fn);
+    var disconnect = dropEffect.bind(null, hook);
+    return function () {
+      return observer(hook.apply(this, arguments), disconnect);
+    };
   };
-
-  function handleEvent(e) {
-    this['on' + e.type]();
-  }
-
-  function onconnected() {
-    ondisconnected.call(this);
-    this._ = this.$();
-  }
-
-  function ondisconnected() {
-    var _ = this._;
-    this._ = null;
-    if (_) _();
-  }
 
   /*! (c) Andrea Giammarchi - ISC */
   var self$2 = null ||
@@ -1409,7 +1289,7 @@ var neverland = (function (exports) {
           //        Use a better RegExp to find last attribute instead
           //        of trusting `name` is what we are looking for.
           //        Thanks IE/Edge, I hate you both.
-          new RegExp('^(?:|[\\S\\s]*?\\s)(' + name + ')\\s*=\\s*(\'|")', 'i'), '$1');
+          new RegExp('^(?:|[\\S\\s]*?\\s)(' + name + ')\\s*=\\s*(\'|")[\\S\\s]*', 'i'), '$1');
           var value = attributes[realName] || // the following ignore is covered by browsers
           // while basicHTML is already case-sensitive
 
@@ -1793,8 +1673,14 @@ var neverland = (function (exports) {
     };
   };
 
-  var hyperSetter = function hyperSetter(node, name) {
-    return function (value) {
+  var hyperSetter = function hyperSetter(node, name, svg) {
+    return svg ? function (value) {
+      try {
+        node[name] = value;
+      } catch (nope) {
+        node.setAttribute(name, value);
+      }
+    } : function (value) {
       node[name] = value;
     };
   }; // list of attributes that should not be directly assigned
@@ -1837,7 +1723,7 @@ var neverland = (function (exports) {
           return hyperRef(node);
 
         default:
-          if (name.slice(0, 1) === '.') return hyperSetter(node, name.slice(1));
+          if (name.slice(0, 1) === '.') return hyperSetter(node, name.slice(1), OWNER_SVG_ELEMENT in node);
           if (name.slice(0, 2) === 'on') return hyperEvent(node, name);
           if (name in node && !(OWNER_SVG_ELEMENT in node || readOnly.test(name))) return hyperProperty(node, name);
           return hyperAttribute(node, original);
@@ -1910,7 +1796,7 @@ var neverland = (function (exports) {
                     break;
 
                   case 'function':
-                    anyContent(value.map(invoke, node));
+                    anyContent(value.map(invoke$1, node));
                     break;
 
                   case 'object':
@@ -1976,7 +1862,7 @@ var neverland = (function (exports) {
     }
   };
 
-  function invoke(callback) {
+  function invoke$1(callback) {
     return callback(this);
   }
 
@@ -2176,41 +2062,23 @@ var neverland = (function (exports) {
       html = _hook.html,
       svg = _hook.svg;
 
-  var index = (function (fn) {
-    return augmentor(function () {
-      var _useRef = useRef({
-        i: 0,
-        $: []
-      }),
-          info = _useRef.current;
+  var neverland = function neverland(fn) {
+    return function () {
+      return augmentor$1(fn).apply(null, arguments);
+    };
+  };
 
-      var i = info.i,
-          $ = info.$;
-      useEffect$1(function () {
-        var i = info.i,
-            $ = info.$;
-        if (i > $.length) $.splice(i);
-        info.i = 0;
-      });
-      info.i++;
-      if (i === $.length) $.push(augmentor(fn));
-      return $[i].apply(this, arguments);
-    });
-  });
-
-  exports.createContext = createContext;
-  exports.default = index;
   exports.html = html;
+  exports.neverland = neverland;
   exports.render = render;
   exports.svg = svg;
-  exports.useCallback = callback;
-  exports.useContext = useContext;
-  exports.useEffect = useEffect$1;
+  exports.useCallback = useCallback;
+  exports.useEffect = useEffect;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;
   exports.useReducer = useReducer;
   exports.useRef = useRef;
-  exports.useState = state;
+  exports.useState = useState;
 
   return exports;
 
