@@ -7,7 +7,7 @@
 
 - - -
 
-## Experimental Hooks for lighterhtml
+## Hooks via lighterhtml
 
 ```js
 import {neverland, render, html, useState} from 'neverland';
@@ -28,6 +28,12 @@ render(document.body, Counter);
 As [React Hooks](https://reactjs.org/docs/hooks-intro.html) were born to simplify some framework pattern, _Neverland_ goal is to simplify [lighterhtml](https://github.com/WebReflection/lighterhtml) usage, in a virtual component way, through the mighty [dom-augmentor](https://github.com/WebReflection/dom-augmentor).
 
 <sup>See what I did there? _React_ components' hooks are based on virtual DOM while neverland's hooks are based on virtual components.</sup>
+
+## V2 Breaking Changes
+
+  * there is no default exported, but `neverland` named export
+  * the usage of `html` or `svg` must be **once per component**. You [cannot use references within loops](https://inventingwithmonster.io/20190207-break-the-rules-of-react-hooks/#running-hooks-within-a-loop) so define components for inner loops instead.
+  * there are still more DOM trashes than desired, but it works, and the DX is awesome, as well as performance anyway 😊
 
 
 ### Available Renders
