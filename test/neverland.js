@@ -156,27 +156,22 @@ var neverland = (function (exports) {
     fn();
   };
 
-  var set = function set(wm, hook, stack) {
-    return wm.set(hook, stack), stack;
-  };
-
-  var current = function current() {
-    return curr;
-  };
   var augmentor = function augmentor(fn) {
+    var stack = [];
     return function hook() {
       var prev = curr;
       var after = [];
       var i = 0;
       curr = {
         hook: hook,
-        after: after,
         args: arguments,
+        stack: stack,
 
         get index() {
           return i++;
-        }
+        },
 
+        after: after
       };
 
       try {
@@ -187,8 +182,8 @@ var neverland = (function (exports) {
       }
     };
   };
-  var getStack = function getStack(wm, hook) {
-    return wm.get(hook) || set(wm, hook, []);
+  var current = function current() {
+    return curr;
   };
   function different(value, i) {
     return value !== this[i];
@@ -232,15 +227,14 @@ var neverland = (function (exports) {
   }
 
   /*! (c) Andrea Giammarchi - ISC */
-  var states = new WeakMap();
   var updateState = reraf();
   var useState = function useState(value) {
     var _current = current(),
         hook = _current.hook,
         args = _current.args,
+        stack = _current.stack,
         index = _current.index;
 
-    var stack = getStack(states, hook);
     if (stack.length <= index) stack[index] = value;
     return [stack[index], function (value) {
       stack[index] = value;
@@ -248,6 +242,7 @@ var neverland = (function (exports) {
     }];
   };
 
+  /*! (c) Andrea Giammarchi - ISC */
   var hooks = new WeakMap();
 
   var invoke$1 = function invoke(_ref) {
@@ -299,10 +294,9 @@ var neverland = (function (exports) {
     return function (effect, guards) {
       var _current = current(),
           hook = _current.hook,
-          after = _current.after,
-          index = _current.index;
-
-      var stack = getStack(effects, hook);
+          stack = _current.stack,
+          index = _current.index,
+          after = _current.after;
 
       if (index < stack.length) {
         var info = stack[index];
@@ -336,6 +330,7 @@ var neverland = (function (exports) {
           values: guards
         };
         stack[index] = _info;
+        (effects.get(hook) || effects.set(hook, []).get(hook)).push(_info);
         if (sync) after.push(_invoke);else _info.stop = _update(_invoke);
       }
     };
@@ -344,7 +339,7 @@ var neverland = (function (exports) {
   var useEffect = createEffect(false);
   var useLayoutEffect = createEffect(true);
   var dropEffect = function dropEffect(hook) {
-    getStack(effects, hook).forEach(function (info) {
+    if (effects.has(hook)) effects.get(hook).forEach(function (info) {
       var clean = info.clean,
           stop = info.stop;
       stop();
@@ -357,90 +352,38 @@ var neverland = (function (exports) {
   };
 
   /*! (c) Andrea Giammarchi - ISC */
-  var memos = new WeakMap();
   var useMemo = function useMemo(memo, guards) {
     var _current = current(),
-        hook = _current.hook,
+        stack = _current.stack,
         index = _current.index;
 
-    var stack = getStack(memos, hook);
     if (!guards || stack.length <= index || guards.some(different, stack[index].values)) stack[index] = {
       current: memo(),
       values: guards
     };
     return stack[index].current;
   };
-
-  /*! (c) Andrea Giammarchi - ISC */
   var useCallback = function useCallback(fn, guards) {
     return useMemo(function () {
       return fn;
     }, guards);
   };
 
-  
-
-  function _slicedToArray(arr, i) {
-    return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest();
-  }
-
-  function _arrayWithHoles(arr) {
-    if (Array.isArray(arr)) return arr;
-  }
-
-  function _iterableToArrayLimit(arr, i) {
-    if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) {
-      return;
-    }
-
-    var _arr = [];
-    var _n = true;
-    var _d = false;
-    var _e = undefined;
-
-    try {
-      for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) {
-        _arr.push(_s.value);
-
-        if (i && _arr.length === i) break;
-      }
-    } catch (err) {
-      _d = true;
-      _e = err;
-    } finally {
-      try {
-        if (!_n && _i["return"] != null) _i["return"]();
-      } finally {
-        if (_d) throw _e;
-      }
-    }
-
-    return _arr;
-  }
-
-  function _nonIterableRest() {
-    throw new TypeError("Invalid attempt to destructure non-iterable instance");
-  }
-
+  /*! (c) Andrea Giammarchi - ISC */
   var useReducer = function useReducer(reducer, value, init) {
-    var _useState = useState(init ? init(value) : value),
-        _useState2 = _slicedToArray(_useState, 2),
-        state = _useState2[0],
-        update = _useState2[1];
-
-    return [state, function (value) {
-      update(reducer(state, value));
+    // avoid Babel destructuring bloat
+    var pair = useState(init ? init(value) : value);
+    return [pair[0], function (value) {
+      pair[1](reducer(pair[0], value));
     }];
   };
 
   /*! (c) Andrea Giammarchi - ISC */
-  var refs = new WeakMap();
   var useRef = function useRef(value) {
     var _current = current(),
-        hook = _current.hook,
+        stack = _current.stack,
         index = _current.index;
 
-    var stack = getStack(refs, hook);
     return index < stack.length ? stack[index] : stack[index] = {
       current: value
     };
@@ -489,6 +432,8 @@ var neverland = (function (exports) {
       return observer(hook.apply(this, arguments), disconnect);
     };
   };
+
+  
 
   /*! (c) Andrea Giammarchi - ISC */
   var self$2 = null ||
@@ -2008,7 +1953,7 @@ var neverland = (function (exports) {
     }
   }
 
-  function set$1(node) {
+  function set(node) {
     var info = {
       i: 0,
       length: 0,
@@ -2021,7 +1966,7 @@ var neverland = (function (exports) {
 
   function update$1(reference, callback, Tagger) {
     var prev = current$1;
-    current$1 = wm.get(reference) || set$1(reference);
+    current$1 = wm.get(reference) || set(reference);
     current$1.i = 0;
     var ret = callback.call(this);
     var value;
