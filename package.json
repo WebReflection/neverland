@@ -1,6 +1,6 @@
 {
   "name": "neverland",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "description": "React like Hooks for hyperHTML",
   "main": "cjs/index.js",
   "module": "esm/index.js",
