@@ -227,7 +227,7 @@ var neverland = (function (exports) {
   }
 
   /*! (c) Andrea Giammarchi - ISC */
-  var updateState = reraf();
+  var updates = new WeakMap();
   var useState = function useState(value) {
     var _current = current(),
         hook = _current.hook,
@@ -235,10 +235,14 @@ var neverland = (function (exports) {
         stack = _current.stack,
         index = _current.index;
 
-    if (stack.length <= index) stack[index] = value;
+    if (stack.length <= index) {
+      stack[index] = value;
+      if (!updates.has(hook)) updates.set(hook, reraf());
+    }
+
     return [stack[index], function (value) {
       stack[index] = value;
-      updateState(hook, null, args);
+      updates.get(hook)(hook, null, args);
     }];
   };
 

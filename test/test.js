@@ -5,6 +5,7 @@ addEventListener(
     const {
       neverland: MrSmee,  // alias as you prefer
       html,               // svg too if you need it
+      inner,
       useEffect, useReducer, useRef, useState
     } = neverland;
 
@@ -62,7 +63,7 @@ addEventListener(
             {type: 'increment', text: '+'},
             {type: 'decrement', text: '-'}
           ].map(
-            info => html`<button onclick=${() => dispatch(info)}>${info.text}</button>`
+            info => inner.html`<button onclick=${() => dispatch(info)}>${info.text}</button>`
           )}
           <button onclick=${e => e.currentTarget.closest('div').remove()}>
             Remove

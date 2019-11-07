@@ -31,7 +31,7 @@
     ]
   },
   "dependencies": {
-    "dom-augmentor": "^1.1.2",
+    "dom-augmentor": "^1.1.3",
     "lighterhtml": "^1.4.1"
   },
   "devDependencies": {
