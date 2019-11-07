@@ -31,11 +31,11 @@
     ]
   },
   "dependencies": {
-    "dom-augmentor": "^1.1.1",
+    "dom-augmentor": "^1.1.2",
     "lighterhtml": "^1.4.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.7.0",
+    "@babel/core": "^7.7.2",
     "@babel/preset-env": "^7.7.1",
     "ascjs": "^3.1.0",
     "drop-babel-typeof": "^1.0.3",

@@ -320,18 +320,21 @@ var neverland = (function (exports) {
           _info.clean = effect();
         };
 
-        var _update = reraf();
-
+        if (!effects.has(hook)) effects.set(hook, {
+          stack: [],
+          update: reraf()
+        });
+        var details = effects.get(hook);
         var _info = {
           clean: null,
           invoke: _invoke,
           stop: stop,
-          update: _update,
+          update: details.update,
           values: guards
         };
         stack[index] = _info;
-        (effects.get(hook) || effects.set(hook, []).get(hook)).push(_info);
-        if (sync) after.push(_invoke);else _info.stop = _update(_invoke);
+        details.stack.push(_info);
+        if (sync) after.push(_invoke);else _info.stop = details.update(_invoke);
       }
     };
   };
@@ -339,7 +342,7 @@ var neverland = (function (exports) {
   var useEffect = createEffect(false);
   var useLayoutEffect = createEffect(true);
   var dropEffect = function dropEffect(hook) {
-    if (effects.has(hook)) effects.get(hook).forEach(function (info) {
+    if (effects.has(hook)) effects.get(hook).stack.forEach(function (info) {
       var clean = info.clean,
           stop = info.stop;
       stop();
