@@ -4,8 +4,8 @@ addEventListener(
 
     const {
       neverland: MrSmee,  // alias as you prefer
-      html,               // svg too if you need it
-      inner,
+      html,
+      render,
       useEffect, useReducer, useRef, useState
     } = neverland;
 
@@ -16,7 +16,9 @@ addEventListener(
       div.appendChild(
         document.createElement('h1')
       ).textContent = name;
-      div.appendChild(Component());
+      render(div.appendChild(
+        document.createElement('div')
+      ), Component);
     };
 
     // The most basic Hook: useState
@@ -63,7 +65,7 @@ addEventListener(
             {type: 'increment', text: '+'},
             {type: 'decrement', text: '-'}
           ].map(
-            info => inner.html`<button onclick=${() => dispatch(info)}>${info.text}</button>`
+            info => html`<button onclick=${() => dispatch(info)}>${info.text}</button>`
           )}
           <button onclick=${e => e.currentTarget.closest('div').remove()}>
             Remove

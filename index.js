@@ -495,54 +495,6 @@ var neverland = (function (exports) {
 
   var WeakMap$1 = self$2.WeakMap;
 
-  /*! (c) Andrea Giammarchi - ISC */
-  // Custom
-  var UID = '-' + Math.random().toFixed(6) + '%'; //                           Edge issue!
-
-  var UID_IE = false;
-
-  try {
-    if (!function (template, content, tabindex) {
-      return content in template && (template.innerHTML = '<p ' + tabindex + '="' + UID + '"></p>', template[content].childNodes[0].getAttribute(tabindex) == UID);
-    }(document.createElement('template'), 'content', 'tabindex')) {
-      UID = '_dt: ' + UID.slice(1, -1) + ';';
-      UID_IE = true;
-    }
-  } catch (meh) {}
-
-  var UIDC = '<!--' + UID + '-->'; // DOM
-
-  var COMMENT_NODE = 8;
-  var ELEMENT_NODE = 1;
-  var TEXT_NODE = 3;
-  var SHOULD_USE_TEXT_CONTENT = /^(?:style|textarea)$/i;
-  var VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
-
-  /*! (c) Andrea Giammarchi - ISC */
-  function domsanitizer (template) {
-    return template.join(UIDC).replace(selfClosing, fullClosing).replace(attrSeeker, attrReplacer);
-  }
-  var spaces = ' \\f\\n\\r\\t';
-  var almostEverything = '[^' + spaces + '\\/>"\'=]+';
-  var attrName = '[' + spaces + ']+' + almostEverything;
-  var tagName = '<([A-Za-z]+[A-Za-z0-9:._-]*)((?:';
-  var attrPartials = '(?:\\s*=\\s*(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything.replace('\\/', '') + '))?)';
-  var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([' + spaces + ']*/?>)', 'g');
-  var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([' + spaces + ']*/>)', 'g');
-  var findAttributes = new RegExp('(' + attrName + '\\s*=\\s*)([\'"]?)' + UIDC + '\\2', 'gi');
-
-  function attrReplacer($0, $1, $2, $3) {
-    return '<' + $1 + $2.replace(findAttributes, replaceAttributes) + $3;
-  }
-
-  function replaceAttributes($0, $1, $2) {
-    return $1 + ($2 || '"') + UID + ($2 || '"');
-  }
-
-  function fullClosing($0, $1, $2) {
-    return VOID_ELEMENTS.test($1) ? $0 : '<' + $1 + $2 + '></' + $1 + '>';
-  }
-
   var isNoOp = (typeof document === "undefined" ? "undefined" : typeof(document)) !== 'object';
 
   var _templateLiteral = function templateLiteral(tl) {
@@ -608,61 +560,51 @@ var neverland = (function (exports) {
   }
 
   /*! (c) Andrea Giammarchi - ISC */
-  var Wire = function (slice, proto) {
-    proto = Wire.prototype;
-    proto.ELEMENT_NODE = 1;
-    proto.nodeType = 111;
+  // Custom
+  var UID = '-' + Math.random().toFixed(6) + '%'; //                           Edge issue!
 
-    proto.remove = function (keepFirst) {
-      var childNodes = this.childNodes;
-      var first = this.firstChild;
-      var last = this.lastChild;
-      this._ = null;
+  var UID_IE = false;
 
-      if (keepFirst && childNodes.length === 2) {
-        last.parentNode.removeChild(last);
-      } else {
-        var range = this.ownerDocument.createRange();
-        range.setStartBefore(keepFirst ? childNodes[1] : first);
-        range.setEndAfter(last);
-        range.deleteContents();
-      }
-
-      return first;
-    };
-
-    proto.valueOf = function (forceAppend) {
-      var fragment = this._;
-      var noFragment = fragment == null;
-      if (noFragment) fragment = this._ = this.ownerDocument.createDocumentFragment();
-
-      if (noFragment || forceAppend) {
-        for (var n = this.childNodes, i = 0, l = n.length; i < l; i++) {
-          fragment.appendChild(n[i]);
-        }
-      }
-
-      return fragment;
-    };
-
-    return Wire;
-
-    function Wire(childNodes) {
-      var nodes = this.childNodes = slice.call(childNodes, 0);
-      this.firstChild = nodes[0];
-      this.lastChild = nodes[nodes.length - 1];
-      this.ownerDocument = nodes[0].ownerDocument;
-      this._ = null;
+  try {
+    if (!function (template, content, tabindex) {
+      return content in template && (template.innerHTML = '<p ' + tabindex + '="' + UID + '"></p>', template[content].childNodes[0].getAttribute(tabindex) == UID);
+    }(document.createElement('template'), 'content', 'tabindex')) {
+      UID = '_dt: ' + UID.slice(1, -1) + ';';
+      UID_IE = true;
     }
-  }([].slice);
+  } catch (meh) {}
 
-  var isArray = Array.isArray;
-  var wireType = Wire.prototype.nodeType;
-  Object.freeze(Hole);
+  var UIDC = '<!--' + UID + '-->'; // DOM
 
-  function Hole(type, args) {
-    this.type = type;
-    this.args = args;
+  var COMMENT_NODE = 8;
+  var ELEMENT_NODE = 1;
+  var TEXT_NODE = 3;
+  var SHOULD_USE_TEXT_CONTENT = /^(?:style|textarea)$/i;
+  var VOID_ELEMENTS = /^(?:area|base|br|col|embed|hr|img|input|keygen|link|menuitem|meta|param|source|track|wbr)$/i;
+
+  /*! (c) Andrea Giammarchi - ISC */
+  function domsanitizer (template) {
+    return template.join(UIDC).replace(selfClosing, fullClosing).replace(attrSeeker, attrReplacer);
+  }
+  var spaces = ' \\f\\n\\r\\t';
+  var almostEverything = '[^' + spaces + '\\/>"\'=]+';
+  var attrName = '[' + spaces + ']+' + almostEverything;
+  var tagName = '<([A-Za-z]+[A-Za-z0-9:._-]*)((?:';
+  var attrPartials = '(?:\\s*=\\s*(?:\'[^\']*?\'|"[^"]*?"|<[^>]*?>|' + almostEverything.replace('\\/', '') + '))?)';
+  var attrSeeker = new RegExp(tagName + attrName + attrPartials + '+)([' + spaces + ']*/?>)', 'g');
+  var selfClosing = new RegExp(tagName + attrName + attrPartials + '*)([' + spaces + ']*/>)', 'g');
+  var findAttributes = new RegExp('(' + attrName + '\\s*=\\s*)([\'"]?)' + UIDC + '\\2', 'gi');
+
+  function attrReplacer($0, $1, $2, $3) {
+    return '<' + $1 + $2.replace(findAttributes, replaceAttributes) + $3;
+  }
+
+  function replaceAttributes($0, $1, $2) {
+    return $1 + ($2 || '"') + UID + ($2 || '"');
+  }
+
+  function fullClosing($0, $1, $2) {
+    return VOID_ELEMENTS.test($1) ? $0 : '<' + $1 + $2 + '></' + $1 + '>';
   }
 
   /*! (c) Andrea Giammarchi - ISC */
@@ -1587,6 +1529,60 @@ var neverland = (function (exports) {
     }
   }();
 
+  /*! (c) Andrea Giammarchi - ISC */
+  var Wire = function (slice, proto) {
+    proto = Wire.prototype;
+    proto.ELEMENT_NODE = 1;
+    proto.nodeType = 111;
+
+    proto.remove = function (keepFirst) {
+      var childNodes = this.childNodes;
+      var first = this.firstChild;
+      var last = this.lastChild;
+      this._ = null;
+
+      if (keepFirst && childNodes.length === 2) {
+        last.parentNode.removeChild(last);
+      } else {
+        var range = this.ownerDocument.createRange();
+        range.setStartBefore(keepFirst ? childNodes[1] : first);
+        range.setEndAfter(last);
+        range.deleteContents();
+      }
+
+      return first;
+    };
+
+    proto.valueOf = function (forceAppend) {
+      var fragment = this._;
+      var noFragment = fragment == null;
+      if (noFragment) fragment = this._ = this.ownerDocument.createDocumentFragment();
+
+      if (noFragment || forceAppend) {
+        for (var n = this.childNodes, i = 0, l = n.length; i < l; i++) {
+          fragment.appendChild(n[i]);
+        }
+      }
+
+      return fragment;
+    };
+
+    return Wire;
+
+    function Wire(childNodes) {
+      var nodes = this.childNodes = slice.call(childNodes, 0);
+      this.firstChild = nodes[0];
+      this.lastChild = nodes[nodes.length - 1];
+      this.ownerDocument = nodes[0].ownerDocument;
+      this._ = null;
+    }
+  }([].slice);
+
+  var isArray = Array.isArray;
+  var create = Object.create,
+      freeze = Object.freeze;
+  var wireType = Wire.prototype.nodeType;
+
   var OWNER_SVG_ELEMENT = 'ownerSVGElement'; // returns nodes from wires and components
 
   var asNode = function asNode(item, i) {
@@ -1860,224 +1856,180 @@ var neverland = (function (exports) {
     return callback(this);
   }
 
-  var wm = new WeakMap$1();
-  var container = new WeakMap$1();
-  var current$1 = null;
+  var cache = new WeakMap$1();
 
-  var lighterhtml = function lighterhtml(Tagger) {
-    var html = outer('html', Tagger);
-    var svg = outer('svg', Tagger);
-    var inner = {
-      html: innerTag('html', Tagger, true),
-      svg: innerTag('svg', Tagger, true)
-    };
+  var createRender = function createRender(Tagger) {
     return {
-      html: html,
-      svg: svg,
-      inner: inner,
-      hook: function hook(useRef) {
-        return {
-          html: createHook(useRef, html),
-          svg: createHook(useRef, svg),
-          inner: inner
-        };
-      },
-      render: function render(node, callback) {
-        var value = update$1.call(this, node, callback, Tagger);
+      html: outer('html', Tagger),
+      svg: outer('svg', Tagger),
+      render: function render(where, what) {
+        var hole = typeof what === 'function' ? what() : what;
+        var info = cache.get(where) || setCache(where);
+        var wire = hole instanceof Hole ? retrieve(Tagger, info, hole) : hole;
 
-        if (container.get(node) !== value) {
-          container.set(node, value);
-          appendClean(node, value);
+        if (wire !== info.wire) {
+          info.wire = wire;
+          where.textContent = '';
+          where.appendChild(wire.valueOf(true));
         }
 
-        return node;
+        return where;
       }
     };
   };
 
-  var _lighterhtml = lighterhtml(Tagger),
-      render = _lighterhtml.render,
-      hook = _lighterhtml.hook;
-
-  function appendClean(node, fragment) {
-    node.textContent = '';
-    node.appendChild(fragment);
-  }
-
-  function asNode$1(result, forceFragment) {
-    return result.nodeType === wireType ? result.valueOf(forceFragment) : result;
-  }
-
-  function createHook(useRef, view) {
-    return function () {
-      var ref = useRef(null);
-      if (ref.current === null) ref.current = view["for"](ref);
-      return asNode$1(ref.current.apply(null, arguments), false);
-    };
-  }
-
-  function innerTag(type, Tagger, hole) {
-    return function () {
-      var args = tta.apply(null, arguments);
-      return hole || current$1 ? new Hole(type, args) : new Tagger(type).apply(null, args);
-    };
-  }
-
-  function outer(type, Tagger) {
-    var wm = new WeakMap$1();
-    var tag = innerTag(type, Tagger, false);
-
-    tag["for"] = function (identity, id) {
-      var ref = wm.get(identity) || set(identity);
-      if (id == null) id = '$';
-      return ref[id] || create(ref, id);
-    };
-
-    return tag;
-
-    function create(ref, id) {
-      var args = [];
-      var wire = null;
-      var tagger = new Tagger(type);
-
-      var callback = function callback() {
-        return tagger.apply(null, unrollArray(args, 1, 1, Tagger));
-      };
-
-      return ref[id] = function () {
-        args = tta.apply(null, arguments);
-        var result = update$1(tagger, callback, Tagger);
-        return wire || (wire = wiredContent(result));
-      };
-    }
-
-    function set(identity) {
-      var ref = {
-        '$': null
-      };
-      wm.set(identity, ref);
-      return ref;
-    }
-  }
-
-  function set(node) {
-    var info = {
-      i: 0,
-      length: 0,
+  var newInfo = function newInfo() {
+    return {
+      sub: [],
       stack: [],
-      update: false
+      wire: null
     };
-    wm.set(node, info);
-    return info;
-  }
+  };
 
-  function update$1(reference, callback, Tagger) {
-    var prev = current$1;
-    current$1 = wm.get(reference) || set(reference);
-    current$1.i = 0;
-    var ret = callback.call(this);
-    var value;
+  var outer = function outer(type, Tagger) {
+    var cache = new WeakMap$1();
 
-    if (ret instanceof Hole) {
-      value = asNode$1(unroll(ret, 0, Tagger), current$1.update);
-      var _current = current$1,
-          i = _current.i,
-          length = _current.length,
-          stack = _current.stack,
-          _update = _current.update;
-      if (i < length) stack.splice(current$1.length = i);
-      if (_update) current$1.update = false;
-    } else {
-      value = asNode$1(ret, false);
+    var fixed = function fixed(info) {
+      return function () {
+        return retrieve(Tagger, info, hole.apply(null, arguments));
+      };
+    };
+
+    var set = function set(ref) {
+      var memo = create(null);
+      cache.set(ref, memo);
+      return memo;
+    };
+
+    hole["for"] = function (ref, id) {
+      var memo = cache.get(ref) || set(ref);
+      return memo[id] || (memo[id] = fixed(newInfo()));
+    };
+
+    hole.node = function () {
+      return retrieve(Tagger, newInfo(), hole.apply(null, arguments)).valueOf(true);
+    };
+
+    return hole;
+
+    function hole() {
+      return new Hole(type, tta.apply(null, arguments));
     }
+  };
 
-    current$1 = prev;
-    return value;
-  }
+  var retrieve = function retrieve(Tagger, info, hole) {
+    var sub = info.sub,
+        stack = info.stack;
+    var counter = {
+      a: 0,
+      aLength: sub.length,
+      i: 0,
+      iLength: stack.length
+    };
+    var wire = unroll(Tagger, info, hole, counter);
+    var a = counter.a,
+        i = counter.i,
+        aLength = counter.aLength,
+        iLength = counter.iLength;
+    if (a + 1 < aLength) sub.splice(a + 1);
+    if (i + 1 < iLength) stack.splice(i + 1);
+    return wire;
+  };
 
-  function unroll(hole, level, Tagger) {
-    var _current2 = current$1,
-        i = _current2.i,
-        length = _current2.length,
-        stack = _current2.stack;
+  var setCache = function setCache(where) {
+    var info = newInfo();
+    cache.set(where, info);
+    return info;
+  };
+
+  var unroll = function unroll(Tagger, info, hole, counter) {
+    var stack = info.stack;
+    var i = counter.i,
+        iLength = counter.iLength;
     var type = hole.type,
         args = hole.args;
-    var stacked = i < length;
-    current$1.i++;
-    if (!stacked) current$1.length = stack.push({
-      l: level,
-      kind: type,
+    if (i === iLength) counter.iLength = stack.push({
+      type: type,
+      id: args[0],
       tag: null,
-      tpl: args[0],
       wire: null
     });
-    unrollArray(args, 1, level + 1, Tagger);
-    var info = stack[i];
-
-    if (stacked) {
-      var control = info.l,
-          kind = info.kind,
-          _tag = info.tag,
-          tpl = info.tpl,
-          _wire = info.wire;
-
-      if (control === level && type === kind && tpl === args[0]) {
-        _tag.apply(null, args);
-
-        return _wire;
-      }
+    unrollArray(Tagger, info, args, counter);
+    var entry = stack[i];
+    if (i < iLength && entry.id === args[0] && entry.type === type) entry.tag.apply(null, args);else {
+      entry.type = type;
+      entry.id = args[0];
+      entry.tag = new Tagger(type);
+      entry.wire = wiredContent(entry.tag.apply(null, args));
     }
+    return entry.wire;
+  };
 
-    var tag = new Tagger(type);
-    var wire = wiredContent(tag.apply(null, args));
-    info.l = level;
-    info.kind = type;
-    info.tag = tag;
-    info.tpl = args[0];
-    info.wire = wire;
-    if (i < 1) current$1.update = true;
-    return wire;
-  }
+  var unrollArray = function unrollArray(Tagger, info, args, counter) {
+    for (var i = 1, length = args.length; i < length; i++) {
+      var hole = args[i];
 
-  function unrollArray(arr, i, level, Tagger) {
-    for (var length = arr.length; i < length; i++) {
-      var value = arr[i];
+      if (typeof(hole) === 'object' && hole) {
+        if (hole instanceof Hole) {
+          counter.i++;
+          args[i] = unroll(Tagger, info, hole, counter);
+        } else if (isArray(hole)) {
+          for (var _i = 0, _length = hole.length; _i < _length; _i++) {
+            var inner = hole[_i];
 
-      if (typeof(value) === 'object' && value) {
-        if (value instanceof Hole) {
-          arr[i] = unroll(value, level - 1, Tagger);
-        } else if (isArray(value)) {
-          arr[i] = unrollArray(value, 0, level++, Tagger);
+            if (typeof(inner) === 'object' && inner && inner instanceof Hole) {
+              var sub = info.sub;
+              var a = counter.a,
+                  aLength = counter.aLength;
+              if (a === aLength) counter.aLength = sub.push(newInfo());
+              counter.a++;
+              hole[_i] = retrieve(Tagger, sub[a], inner);
+            }
+          }
         }
       }
     }
+  };
 
-    return arr;
-  }
-
-  function wiredContent(node) {
+  var wiredContent = function wiredContent(node) {
     var childNodes = node.childNodes;
     var length = childNodes.length;
     return length === 1 ? childNodes[0] : length ? new Wire(childNodes) : node;
+  };
+
+  freeze(Hole);
+  function Hole(type, args) {
+    this.type = type;
+    this.args = args;
   }
 
-  var _hook = hook(useRef),
-      html = _hook.html,
-      svg = _hook.svg,
-      inner = _hook.inner;
+  var _createRender = createRender(Tagger),
+      render = _createRender.render,
+      html = _createRender.html,
+      svg = _createRender.svg;
 
+  function html$1() {
+    return html["for"](useRef(null), '').apply(null, arguments);
+  }
+  function svg$1() {
+    return svg["for"](useRef(null), '').apply(null, arguments);
+  }
   var neverland = function neverland(fn) {
     return function () {
       return augmentor$1(fn).apply(null, arguments);
     };
   };
+  var inner = {
+    html: html$1,
+    svg: svg$1
+  };
 
   exports.createContext = createContext;
-  exports.html = html;
+  exports.html = html$1;
   exports.inner = inner;
   exports.neverland = neverland;
   exports.render = render;
-  exports.svg = svg;
+  exports.svg = svg$1;
   exports.useCallback = useCallback;
   exports.useContext = useContext;
   exports.useEffect = useEffect;
