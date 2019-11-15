@@ -26,6 +26,7 @@ exports.inner = inner;
 })(require('lighterhtml'));
 
 (m => {
+  exports.contextual = m.contextual;
   exports.useState = m.useState;
   exports.useEffect = m.useEffect;
   exports.useContext = m.useContext;
@@ -35,4 +36,4 @@ exports.inner = inner;
   exports.useCallback = m.useCallback;
   exports.useMemo = m.useMemo;
   exports.useLayoutEffect = m.useLayoutEffect;
-})(require('augmentor'));
+})(require('dom-augmentor'));

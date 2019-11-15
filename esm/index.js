@@ -19,6 +19,7 @@ export const inner = {html, svg};
 export {render} from 'lighterhtml';
 
 export {
+  contextual,
   useState,
   useEffect,
   useContext, createContext,
@@ -27,4 +28,4 @@ export {
   useCallback,
   useMemo,
   useLayoutEffect
-} from 'augmentor';
+} from 'dom-augmentor';
