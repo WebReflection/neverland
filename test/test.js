@@ -3,7 +3,7 @@ addEventListener(
   () => {
 
     const {
-      neverland: MrSmee,  // alias as you prefer
+      neverland: $,  // alias as you prefer
       html,
       render,
       useEffect, useReducer, useRef, useState
@@ -22,16 +22,15 @@ addEventListener(
     };
 
     // The most basic Hook: useState
-    const Counter = MrSmee(() => {
+    const Counter = $(() => {
       const [count, setCount] = useState(0);
-      return html`
+      return html.for(document, 'Counter')`
       <button onclick=${() => setCount(count + 1)}>
         Count: ${count}
       </button>`;
     });
 
     demo('Counter', Counter);
-
 
     // The reducer and effect Hook
     const initialState = {count: 0};
@@ -47,7 +46,11 @@ addEventListener(
       }
     }
 
-    const ReducedCounter = MrSmee(() => {
+    const staticInfo = [
+      {type: 'increment', text: '+'},
+      {type: 'decrement', text: '-'}
+    ];
+    const ReducedCounter = $(() => {
       const [state, dispatch] = useReducer(reducer, initialState);
       useEffect(() => console.log(state));
       useEffect(() => {
@@ -61,11 +64,8 @@ addEventListener(
           <button onclick=${() => dispatch({type: 'reset'})}>
             Reset
           </button>
-          ${[
-            {type: 'increment', text: '+'},
-            {type: 'decrement', text: '-'}
-          ].map(
-            info => html`<button onclick=${() => dispatch(info)}>${info.text}</button>`
+          ${staticInfo.map(
+            info => html.for(info)`<button onclick=${() => dispatch(info)}>${info.text}</button>`
           )}
           <button onclick=${e => e.currentTarget.closest('div').remove()}>
             Remove
@@ -76,11 +76,10 @@ addEventListener(
 
     demo('ReducedCounter', ReducedCounter);
 
-
     // The useRef Hook plus hyperHTML goodness via on~dis/connected,
     // making the need to return cleanup functions
     // not better than invoking callbacks when live/offline status changes
-    const RefCounter = MrSmee(() => {
+    const RefCounter = $(() => {
       const [count, setCount] = useState(0);
       const [icount, setICount] = useState(0);
       const {current: increment} = useRef(
@@ -90,7 +89,7 @@ addEventListener(
         console.log(window.log = 'Harrrrrrrr!!');
         return () => console.log('!!rrrrrrrraH');
       });
-      return html`
+      return html.for(document, 'RefCounter')`
       <div>
         <p>Count: ${count}</p>
         <p>Increment: ${increment}</p>
