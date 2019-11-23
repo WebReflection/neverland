@@ -10,36 +10,79 @@
 ## Hooks via lighterhtml
 
 ```js
-import {neverland, render, html, useState} from 'neverland';
+import {neverland as $, render, html, useState} from 'neverland';
 
-const Counter = neverland(() => {
-  const [count, setCount] = useState(0);
+const Counter = $((initialState) => {
+  const [count, setCount] = useState(initialState);
   return html`
   <button onclick=${() => setCount(count + 1)}>
     Count: ${count}
   </button>`;
 });
 
-render(document.body, Counter);
-// alternatively
-// document.body.appendChild(Counter());
+// basic example, show two independent counters
+render(document.body, html`
+  <div>
+    A bounce of counters.<hr>
+    ${Counter(0)} ${Counter(1)}
+  </div>
+`);
 ```
+
+### Concept
 
 As [React Hooks](https://reactjs.org/docs/hooks-intro.html) were born to simplify some framework pattern, _Neverland_ goal is to simplify [lighterhtml](https://github.com/WebReflection/lighterhtml) usage, in a virtual component way, through the mighty [dom-augmentor](https://github.com/WebReflection/dom-augmentor).
 
 <sup>See what I did there? _React_ components' hooks are based on virtual DOM while neverland's hooks are based on virtual components.</sup>
 
-## V2 Breaking Changes
+This library simulates Custom Elements, without needing polyfills, simply by passing zero, one, or more arguments to every desired components in each template literal hole.
 
-  * there is no default exported, but `neverland` named export
-  * there are still more DOM trashes than desired, but it works, and the DX is awesome, as well as performance anyway 😊
+```js
+// if you don't need hooks, you don't need to wrap components
+const LinkLi = ({text, href}, highlighted) => html`
+  <li class=${highlighted}>
+    see <a href="${href}">${text}</a>
+  </li>
+`;
+
+// some container with some click logic that uses hooks: $(wrap it)
+const Links = $(({items}) => {
+  const [clicked, changeState] = useState(-1);
+  const onclick = useMemo(event => {
+    const li = event.target.closest('li');
+    changeState(
+      // changeState accordingly to the clicked index
+      [].indexOf.call(event.currentTarget.children, li)
+    );
+  }, []);
+  return html`
+  <ul onclick=${onclick}>
+    ${items.map(
+      (item, i) => LinkLi(item, i === clicked ? 'highlight' : '')
+    )}
+  </ul>`;
+});
+
+// render components within an element
+render(document.body, html`
+  List of links:
+  ${Links([
+    {text: 'blog', href: 'www.blog.me'},
+    {text: 'bio', href: 'www.bio.me'},
+  ])}
+`);
+```
+
 
 ### Available Renders
 
 Both `html` and `svg` renders are exposed via the `neverland` module, and you must use the `render` utility
 
 
+
 ### Available Hooks
+
+All hooks are provided by [augmentor](https://github.com/WebReflection/augmentor#available-hooks), via [dom-augmentor](https://github.com/WebReflection/dom-augmentor) that takes care or injecting life-cycle DOM events when `useEffect` is used.
 
   * **Basic Hooks**
     * [useState](https://reactjs.org/docs/hooks-reference.html#usestate)
@@ -86,3 +129,18 @@ const VirtualComp = $(...);
 You can, of course, choose the right export name to whatever you think would suit.
 
 As example, I've used `MrSmee(...)` for the [test page](test/test.js), which you can also [test it live](https://webreflection.github.io/neverland/test/).
+
+
+
+## V3 Features / Breaking Changes
+
+  * no more unnecessary DOM trashes 🎉
+  * it is possible to have keyed results, when necessary, via `html.for(ref[, id])` or `svg.for(ref[, id])`
+  * the usage of `render` is **mandatory**, no more DOM nodes out of the box
+
+
+
+## V2 Breaking Changes
+
+  * there is no default exported, but `neverland` named export
+  * there are still more DOM trashes than desired, but it works, and the DX is awesome, as well as performance anyway 😊

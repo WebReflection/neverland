@@ -1,11 +1,130 @@
 var neverland = (function (exports) {
   'use strict';
 
+  
+
   /*! (c) Andrea Giammarchi - ISC */
   var self = null ||
   /* istanbul ignore next */
   {};
-  self.CustomEvent = typeof CustomEvent === 'function' ? CustomEvent : function (__p__) {
+
+  try {
+    self.WeakMap = WeakMap;
+  } catch (WeakMap) {
+    // this could be better but 90% of the time
+    // it's everything developers need as fallback
+    self.WeakMap = function (id, Object) {
+
+      var dP = Object.defineProperty;
+      var hOP = Object.hasOwnProperty;
+      var proto = WeakMap.prototype;
+
+      proto["delete"] = function (key) {
+        return this.has(key) && delete key[this._];
+      };
+
+      proto.get = function (key) {
+        return this.has(key) ? key[this._] : void 0;
+      };
+
+      proto.has = function (key) {
+        return hOP.call(key, this._);
+      };
+
+      proto.set = function (key, value) {
+        dP(key, this._, {
+          configurable: true,
+          value: value
+        });
+        return this;
+      };
+
+      return WeakMap;
+
+      function WeakMap(iterable) {
+        dP(this, '_', {
+          value: '_@ungap/weakmap' + id++
+        });
+        if (iterable) iterable.forEach(add, this);
+      }
+
+      function add(pair) {
+        this.set(pair[0], pair[1]);
+      }
+    }(Math.random(), Object);
+  }
+
+  var WeakMap$1 = self.WeakMap;
+
+  var isNoOp = (typeof document === "undefined" ? "undefined" : typeof(document)) !== 'object';
+
+  var _templateLiteral = function templateLiteral(tl) {
+    var RAW = 'raw';
+
+    var isBroken = function isBroken(UA) {
+      return /(Firefox|Safari)\/(\d+)/.test(UA) && !/(Chrom[eium]+|Android)\/(\d+)/.test(UA);
+    };
+
+    var broken = isBroken((document.defaultView.navigator || {}).userAgent);
+    var FTS = !(RAW in tl) || tl.propertyIsEnumerable(RAW) || !Object.isFrozen(tl[RAW]);
+
+    if (broken || FTS) {
+      var forever = {};
+
+      var foreverCache = function foreverCache(tl) {
+        for (var key = '.', i = 0; i < tl.length; i++) {
+          key += tl[i].length + '.' + tl[i];
+        }
+
+        return forever[key] || (forever[key] = tl);
+      }; // Fallback TypeScript shenanigans
+
+
+      if (FTS) _templateLiteral = foreverCache; // try fast path for other browsers:
+      // store the template as WeakMap key
+      // and forever cache it only when it's not there.
+      // this way performance is still optimal,
+      // penalized only when there are GC issues
+      else {
+          var wm = new WeakMap$1();
+
+          var set = function set(tl, unique) {
+            wm.set(tl, unique);
+            return unique;
+          };
+
+          _templateLiteral = function templateLiteral(tl) {
+            return wm.get(tl) || set(tl, foreverCache(tl));
+          };
+        }
+    } else {
+      isNoOp = true;
+    }
+
+    return TL(tl);
+  };
+
+  function TL(tl) {
+    return isNoOp ? tl : _templateLiteral(tl);
+  }
+
+  function tta (template) {
+    var length = arguments.length;
+    var args = [TL(template)];
+    var i = 1;
+
+    while (i < length) {
+      args.push(arguments[i++]);
+    }
+
+    return args;
+  }
+
+  /*! (c) Andrea Giammarchi - ISC */
+  var self$1 = null ||
+  /* istanbul ignore next */
+  {};
+  self$1.CustomEvent = typeof CustomEvent === 'function' ? CustomEvent : function (__p__) {
     CustomEvent[__p__] = new CustomEvent('').constructor[__p__];
     return CustomEvent;
 
@@ -16,15 +135,15 @@ var neverland = (function (exports) {
       return e;
     }
   }('prototype');
-  var CustomEvent$1 = self.CustomEvent;
+  var CustomEvent$1 = self$1.CustomEvent;
 
   /*! (c) Andrea Giammarchi - ISC */
-  var self$1 = null ||
+  var self$2 = null ||
   /* istanbul ignore next */
   {};
 
   try {
-    self$1.WeakSet = WeakSet;
+    self$2.WeakSet = WeakSet;
   } catch (WeakSet) {
     // requires a global WeakMap (IE11+)
     (function (WeakMap) {
@@ -43,7 +162,7 @@ var neverland = (function (exports) {
         return all.get(this).has(value);
       };
 
-      self$1.WeakSet = WeakSet;
+      self$2.WeakSet = WeakSet;
 
       function WeakSet(iterable) {
 
@@ -53,7 +172,7 @@ var neverland = (function (exports) {
     })(WeakMap);
   }
 
-  var WeakSet$1 = self$1.WeakSet;
+  var WeakSet$1 = self$2.WeakSet;
 
   /*! (c) Andrea Giammarchi */
   function disconnected(poly) {
@@ -151,26 +270,16 @@ var neverland = (function (exports) {
 
   /*! (c) Andrea Giammarchi - ISC */
   var curr = null;
-
-  var invoke = function invoke(fn) {
-    fn();
-  };
-
   var augmentor = function augmentor(fn) {
     var stack = [];
     return function hook() {
       var prev = curr;
       var after = [];
-      var i = 0;
       curr = {
         hook: hook,
         args: arguments,
         stack: stack,
-
-        get index() {
-          return i++;
-        },
-
+        i: 0,
         after: after
       };
 
@@ -178,7 +287,10 @@ var neverland = (function (exports) {
         return fn.apply(null, arguments);
       } finally {
         curr = prev;
-        after.forEach(invoke);
+
+        for (var i = 0, length = after.length; i < length; i++) {
+          after[i]();
+        }
       }
     };
   };
@@ -241,28 +353,45 @@ var neverland = (function (exports) {
 
   /*! (c) Andrea Giammarchi - ISC */
   var updates = new WeakMap();
-  var useState = function useState(value) {
-    var _current = current(),
-        hook = _current.hook,
-        args = _current.args,
-        stack = _current.stack,
-        index = _current.index;
 
-    if (stack.length <= index) {
-      stack[index] = isFunction(value) ? value() : value;
-      if (!updates.has(hook)) updates.set(hook, reraf());
+  var update = function update(hook, ctx, args) {
+    hook.apply(ctx, args);
+  };
+
+  var defaults = {
+    sync: false,
+    always: false
+  };
+  var useState = function useState(value, options) {
+    var state = current();
+    var i = state.i++;
+    var hook = state.hook,
+        args = state.args,
+        stack = state.stack;
+
+    var _ref = options || defaults,
+        sync = _ref.sync,
+        always = _ref.always;
+
+    if (stack.length <= i) {
+      stack[i] = isFunction(value) ? value() : value;
+      if (!updates.has(hook)) updates.set(hook, sync ? update : reraf());
     }
 
-    return [stack[index], function (value) {
-      stack[index] = isFunction(value) ? value(stack[index]) : value;
-      updates.get(hook)(hook, null, args);
+    return [stack[i], function (value) {
+      var newValue = isFunction(value) ? value(stack[i]) : value;
+
+      if (always || stack[i] !== newValue) {
+        stack[i] = newValue;
+        updates.get(hook)(hook, null, args);
+      }
     }];
   };
 
   /*! (c) Andrea Giammarchi - ISC */
   var hooks = new WeakMap();
 
-  var invoke$1 = function invoke(_ref) {
+  var invoke = function invoke(_ref) {
     var hook = _ref.hook,
         args = _ref.args;
     hook.apply(null, args);
@@ -286,18 +415,18 @@ var neverland = (function (exports) {
       hook: hook,
       args: args
     };
-    if (!stack.some(update, info)) stack.push(info);
+    if (!stack.some(update$1, info)) stack.push(info);
     return context.value;
   };
 
   function provide(value) {
     if (this.value !== value) {
       this.value = value;
-      hooks.get(this).forEach(invoke$1);
+      hooks.get(this).forEach(invoke);
     }
   }
 
-  function update(_ref2) {
+  function update$1(_ref2) {
     var hook = _ref2.hook;
     return hook === this.hook;
   }
@@ -309,14 +438,14 @@ var neverland = (function (exports) {
 
   var createEffect = function createEffect(sync) {
     return function (effect, guards) {
-      var _current = current(),
-          hook = _current.hook,
-          stack = _current.stack,
-          index = _current.index,
-          after = _current.after;
+      var state = current();
+      var i = state.i++;
+      var hook = state.hook,
+          stack = state.stack,
+          after = state.after;
 
-      if (index < stack.length) {
-        var info = stack[index];
+      if (i < stack.length) {
+        var info = stack[i];
         var clean = info.clean,
             update = info.update,
             values = info.values;
@@ -347,7 +476,7 @@ var neverland = (function (exports) {
           update: details.update,
           values: guards
         };
-        stack[index] = _info;
+        stack[i] = _info;
         details.stack.push(_info);
 
         var _invoke = function _invoke() {
@@ -376,15 +505,14 @@ var neverland = (function (exports) {
 
   /*! (c) Andrea Giammarchi - ISC */
   var useMemo = function useMemo(memo, guards) {
-    var _current = current(),
-        stack = _current.stack,
-        index = _current.index;
-
-    if (!guards || stack.length <= index || guards.some(different, stack[index].values)) stack[index] = {
+    var state = current();
+    var i = state.i++;
+    var stack = state.stack;
+    if (!guards || stack.length <= i || guards.some(different, stack[i].values)) stack[i] = {
       current: memo(),
       values: guards
     };
-    return stack[index].current;
+    return stack[i].current;
   };
   var useCallback = function useCallback(fn, guards) {
     return useMemo(function () {
@@ -393,9 +521,10 @@ var neverland = (function (exports) {
   };
 
   /*! (c) Andrea Giammarchi - ISC */
-  var useReducer = function useReducer(reducer, value, init) {
-    // avoid Babel destructuring bloat
-    var pair = useState(init ? init(value) : value);
+  var useReducer = function useReducer(reducer, value, init, options) {
+    var fn = typeof init === 'function'; // avoid `cons [state, update] = ...` Babel destructuring bloat
+
+    var pair = useState(fn ? init(value) : value, fn ? options : init);
     return [pair[0], function (value) {
       pair[1](reducer(pair[0], value));
     }];
@@ -403,11 +532,10 @@ var neverland = (function (exports) {
 
   /*! (c) Andrea Giammarchi - ISC */
   var useRef = function useRef(value) {
-    var _current = current(),
-        stack = _current.stack,
-        index = _current.index;
-
-    return index < stack.length ? stack[index] : stack[index] = {
+    var state = current();
+    var i = state.i++;
+    var stack = state.stack;
+    return i < stack.length ? stack[i] : stack[i] = {
       current: value
     };
   };
@@ -444,135 +572,27 @@ var neverland = (function (exports) {
 
       if (value !== element) observer(value, handler);
     }
-
-    return element;
   };
 
+  var effect = false;
   var augmentor$1 = function augmentor$1(fn) {
     var hook = augmentor(fn);
-    var disconnect = dropEffect.bind(null, hook);
+    var handler = null;
     return function () {
-      return observer(hook.apply(this, arguments), disconnect);
-    };
-  };
+      effect = false;
+      var node = hook.apply(this, arguments);
 
-  
-
-  /*! (c) Andrea Giammarchi - ISC */
-  var self$2 = null ||
-  /* istanbul ignore next */
-  {};
-
-  try {
-    self$2.WeakMap = WeakMap;
-  } catch (WeakMap) {
-    // this could be better but 90% of the time
-    // it's everything developers need as fallback
-    self$2.WeakMap = function (id, Object) {
-
-      var dP = Object.defineProperty;
-      var hOP = Object.hasOwnProperty;
-      var proto = WeakMap.prototype;
-
-      proto["delete"] = function (key) {
-        return this.has(key) && delete key[this._];
-      };
-
-      proto.get = function (key) {
-        return this.has(key) ? key[this._] : void 0;
-      };
-
-      proto.has = function (key) {
-        return hOP.call(key, this._);
-      };
-
-      proto.set = function (key, value) {
-        dP(key, this._, {
-          configurable: true,
-          value: value
-        });
-        return this;
-      };
-
-      return WeakMap;
-
-      function WeakMap(iterable) {
-        dP(this, '_', {
-          value: '_@ungap/weakmap' + id++
-        });
-        if (iterable) iterable.forEach(add, this);
+      if (effect) {
+        effect = false;
+        observer(node, handler || (handler = dropEffect.bind(null, hook)));
       }
 
-      function add(pair) {
-        this.set(pair[0], pair[1]);
-      }
-    }(Math.random(), Object);
-  }
-
-  var WeakMap$1 = self$2.WeakMap;
-
-  var isNoOp = (typeof document === "undefined" ? "undefined" : typeof(document)) !== 'object';
-
-  var _templateLiteral = function templateLiteral(tl) {
-    var RAW = 'raw';
-
-    var isBroken = function isBroken(UA) {
-      return /(Firefox|Safari)\/(\d+)/.test(UA) && !/(Chrom[eium]+|Android)\/(\d+)/.test(UA);
+      return node;
     };
-
-    var broken = isBroken((document.defaultView.navigator || {}).userAgent);
-    var FTS = !(RAW in tl) || tl.propertyIsEnumerable(RAW) || !Object.isFrozen(tl[RAW]);
-
-    if (broken || FTS) {
-      var forever = {};
-
-      var foreverCache = function foreverCache(tl) {
-        for (var key = '.', i = 0; i < tl.length; i++) {
-          key += tl[i].length + '.' + tl[i];
-        }
-
-        return forever[key] || (forever[key] = tl);
-      }; // Fallback TypeScript shenanigans
-
-
-      if (FTS) _templateLiteral = foreverCache; // try fast path for other browsers:
-      // store the template as WeakMap key
-      // and forever cache it only when it's not there.
-      // this way performance is still optimal,
-      // penalized only when there are GC issues
-      else {
-          var wm = new WeakMap$1();
-
-          var set = function set(tl, unique) {
-            wm.set(tl, unique);
-            return unique;
-          };
-
-          _templateLiteral = function templateLiteral(tl) {
-            return wm.get(tl) || set(tl, foreverCache(tl));
-          };
-        }
-    } else {
-      isNoOp = true;
-    }
-
-    return TL(tl);
   };
-
-  function TL(tl) {
-    return isNoOp ? tl : _templateLiteral(tl);
-  }
-
-  function tta (template) {
-    var length = arguments.length;
-    var args = [TL(template)];
-    var i = 1;
-
-    while (i < length) {
-      args.push(arguments[i++]);
-    }
-
-    return args;
+  function useEffect$1() {
+    effect = true;
+    return useEffect.apply(null, arguments);
   }
 
   /*! (c) Andrea Giammarchi - ISC */
@@ -1797,7 +1817,7 @@ var neverland = (function (exports) {
                     break;
 
                   case 'function':
-                    anyContent(value.map(invoke$2, node));
+                    anyContent(value.map(invoke$1, node));
                     break;
 
                   case 'object':
@@ -1863,7 +1883,7 @@ var neverland = (function (exports) {
     }
   };
 
-  function invoke$2(callback) {
+  function invoke$1(callback) {
     return callback(this);
   }
 
@@ -2019,32 +2039,206 @@ var neverland = (function (exports) {
       html = _createRender.html,
       svg = _createRender.svg;
 
-  function html$1() {
-    return html["for"](useRef(null), '').apply(null, arguments);
-  }
-  function svg$1() {
-    return svg["for"](useRef(null), '').apply(null, arguments);
-  }
   var neverland = function neverland(fn) {
     return function () {
-      return augmentor$1(fn).apply(null, arguments);
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+
+      return new Hook(fn, args);
     };
   };
-  var inner = {
-    html: html$1,
-    svg: svg$1
+  var html$1 = function html() {
+    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+      args[_key2] = arguments[_key2];
+    }
+
+    return new Template('html', args);
   };
+  html$1["for"] = createFor(html);
+  var svg$1 = function svg() {
+    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+      args[_key3] = arguments[_key3];
+    }
+
+    return new Template('svg', args);
+  };
+  svg$1["for"] = createFor(svg);
+  var render$1 = function render$1(where, what) {
+    var hook = typeof what === 'function' ? what() : what;
+    var info = cache$1.get(where) || setCache$1(where);
+    return render(where, retrieve$1(info, hook));
+  };
+  var isArray$1 = Array.isArray;
+  var create$1 = Object.create;
+  var cache$1 = new WeakMap$1();
+
+  var cleanUp = function cleanUp(_ref, _ref2) {
+    var sub = _ref.sub,
+        stack = _ref.stack;
+    var a = _ref2.a,
+        i = _ref2.i,
+        aLength = _ref2.aLength,
+        iLength = _ref2.iLength;
+    if (a + 1 < aLength) sub.splice(a + 1);
+    if (i + 1 < iLength) stack.splice(i + 1);
+  };
+
+  var createCounter = function createCounter(_ref3) {
+    var sub = _ref3.sub,
+        stack = _ref3.stack;
+    return {
+      a: 0,
+      aLength: sub.length,
+      i: 0,
+      iLength: stack.length
+    };
+  };
+
+  var createHook = function createHook(info, entry) {
+    return augmentor$1(function () {
+      var template = entry.fn.apply(null, arguments);
+
+      if (template instanceof Template) {
+        var counter = createCounter(info);
+        unrollArray$1(info, template.args, counter);
+        cleanUp(info, counter);
+        return view(entry, template);
+      }
+
+      return template;
+    });
+  };
+
+  var newInfo$1 = function newInfo() {
+    return {
+      sub: [],
+      stack: []
+    };
+  };
+
+  var retrieve$1 = function retrieve(info, hook) {
+    return unroll$1(info, hook, {
+      i: 0,
+      iLength: info.stack.length
+    });
+  };
+
+  var setCache$1 = function setCache(where) {
+    var info = {
+      stack: []
+    };
+    cache$1.set(where, info);
+    return info;
+  };
+
+  var unroll$1 = function unroll(_ref4, _ref5, counter) {
+    var stack = _ref4.stack;
+    var fn = _ref5.fn,
+        args = _ref5.args;
+    var i = counter.i,
+        iLength = counter.iLength;
+    var unknown = i === iLength;
+    if (unknown) counter.iLength = stack.push({
+      fn: fn,
+      hook: null
+    });
+    var entry = stack[i];
+
+    if (unknown || entry.fn !== fn) {
+      entry.fn = fn;
+      entry.hook = createHook(newInfo$1(), entry);
+    }
+
+    return entry.hook.apply(null, args);
+  };
+
+  var unrollArray$1 = function unrollArray(info, args, counter) {
+    for (var i = 1, length = args.length; i < length; i++) {
+      var hook = args[i];
+
+      if (typeof(hook) === 'object' && hook) {
+        if (hook instanceof Hook) {
+          counter.i++;
+          args[i] = unroll$1(info, hook, counter);
+        } else if (hook instanceof Template) {
+          unrollArray(info, hook.args, counter);
+          args[i] = new Hole(hook.type, tta.apply(null, hook.args));
+        } else if (isArray$1(hook)) {
+          for (var _i = 0, _length = hook.length; _i < _length; _i++) {
+            var inner = hook[_i];
+
+            if (typeof(inner) === 'object' && inner) {
+              if (inner instanceof Hook) {
+                var sub = info.sub;
+                var a = counter.a,
+                    aLength = counter.aLength;
+                if (a === aLength) counter.aLength = sub.push(newInfo$1());
+                counter.a++;
+                hook[_i] = retrieve$1(sub[a], inner);
+              } else if (inner instanceof Template) {
+                unrollArray(info, inner.args, counter);
+                hook[_i] = new Hole(inner.type, tta.apply(null, inner.args));
+              }
+            }
+          }
+        }
+      }
+    }
+  };
+
+  var view = function view(entry, _ref6) {
+    var type = _ref6.type,
+        args = _ref6.args;
+    var lighter = type === 'html' ? html : svg;
+    return lighter["for"](entry, type).apply(null, args);
+  };
+
+  function Hook(fn, args) {
+    this.fn = fn;
+    this.args = args;
+  }
+
+  function Template(type, args) {
+    this.type = type;
+    this.args = args;
+  }
+
+  function createFor(lighter) {
+    var cache = new WeakMap$1();
+
+    var setCache = function setCache(entry) {
+      var store = create$1(null);
+      cache.set(entry, store);
+      return store;
+    };
+
+    return function (entry, id) {
+      var store = cache.get(entry) || setCache(entry);
+      var info = store[id] || (store[id] = newInfo$1());
+      return function () {
+        var counter = createCounter(info);
+
+        for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
+          args[_key4] = arguments[_key4];
+        }
+
+        unrollArray$1(info, args, counter);
+        cleanUp(info, counter);
+        return lighter["for"](entry, id).apply(null, args);
+      };
+    };
+  }
 
   exports.contextual = contextual;
   exports.createContext = createContext;
   exports.html = html$1;
-  exports.inner = inner;
   exports.neverland = neverland;
-  exports.render = render;
+  exports.render = render$1;
   exports.svg = svg$1;
   exports.useCallback = useCallback;
   exports.useContext = useContext;
-  exports.useEffect = useEffect;
+  exports.useEffect = useEffect$1;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;
   exports.useReducer = useReducer;
