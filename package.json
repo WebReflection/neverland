@@ -1,6 +1,6 @@
 {
-  "name": "neverland-bench",
-  "version": "0.0.7",
+  "name": "neverland",
+  "version": "2.4.1",
   "description": "React like Hooks for hyperHTML",
   "main": "cjs/index.js",
   "module": "esm/index.js",
@@ -37,13 +37,13 @@
     "lighterhtml": "^2.0.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.7.2",
-    "@babel/preset-env": "^7.7.1",
+    "@babel/core": "^7.7.4",
+    "@babel/preset-env": "^7.7.4",
     "ascjs": "^3.1.0",
     "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.11.1",
     "nightmare": "^3.0.2",
-    "rollup": "^1.27.3",
+    "rollup": "^1.27.4",
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-node-resolve": "^5.2.0",
     "uglify-es": "^3.3.9"
