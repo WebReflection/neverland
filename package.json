@@ -11,7 +11,7 @@
     "min": "echo '/*! (c) Andrea Giammarchi - ISC */' > min.js && uglifyjs index.js -c -m >> min.js",
     "rollup": "rollup --config rollup.config.js",
     "size": "cat index.js | wc -c;cat min.js | wc -c;gzip -c9 min.js | wc -c",
-    "test": "cp index.js test/neverland.js && npm run server & (sleep 1 && npm run nightmare && npm run kill)",
+    "test": "node -e 'require(`basichtml`).init();console.log(require(`.`))'",
     "nightmare": "node test || (npm run kill && exit 1)",
     "server": "node -e 'require(`fs`).writeFileSync(`pid`,require(`child_process`).spawn(`http-server`,[`test`,`-s`]).pid);'",
     "kill": "kill -9 $(cat pid) && rm -f pid"
@@ -40,6 +40,7 @@
     "@babel/core": "^7.7.4",
     "@babel/preset-env": "^7.7.4",
     "ascjs": "^3.1.2",
+    "basichtml": "^1.1.2",
     "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.11.1",
     "nightmare": "^3.0.2",
