@@ -2071,8 +2071,7 @@ var neverland = (function (exports) {
   svg$1["for"] = createFor(svg);
   var render$1 = function render$1(where, what) {
     var hook = typeof what === 'function' ? what() : what;
-    var info = cache$1.get(where) || setCache$1(where);
-    return render(where, retrieve$1(info, hook));
+    return render(where, hook instanceof Hook ? retrieve$1(cache$1.get(where) || setCache$1(where), hook) : hook instanceof Template ? new Hole(hook.type, tta.apply(null, hook.args)) : hook);
   };
   var isArray$1 = Array.isArray;
   var create$1 = Object.create;

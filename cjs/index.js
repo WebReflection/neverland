@@ -23,8 +23,14 @@ svg.for = createFor($svg);
 
 const render = (where, what) => {
   const hook = typeof what === 'function' ? what() : what;
-  const info = cache.get(where) || setCache(where);
-  return $render(where, retrieve(info, hook));
+  return $render(
+    where,
+    hook instanceof Hook ?
+      retrieve(cache.get(where) || setCache(where), hook) :
+      (hook instanceof Template ?
+        new Hole(hook.type, tta.apply(null, hook.args)) :
+        hook)
+  );
 };
 exports.render = render;
 
