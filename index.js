@@ -2071,7 +2071,7 @@ var neverland = (function (exports) {
   svg$1["for"] = createFor(svg);
   var render$1 = function render$1(where, what) {
     var hook = typeof what === 'function' ? what() : what;
-    return render(where, hook instanceof Hook ? retrieve$1(cache$1.get(where) || setCache$1(where), hook) : hook instanceof Template ? new Hole(hook.type, tta.apply(null, hook.args)) : hook);
+    return render(where, hook instanceof Hook ? retrieve$1(cache$1.get(where) || setCache$1(where), hook) : templateAsHole(newInfo$1(), hook));
   };
   var isArray$1 = Array.isArray;
   var create$1 = Object.create;
@@ -2136,10 +2136,18 @@ var neverland = (function (exports) {
     return info;
   };
 
-  var unroll$1 = function unroll(_ref4, _ref5, counter) {
-    var stack = _ref4.stack;
-    var fn = _ref5.fn,
-        args = _ref5.args;
+  var templateAsHole = function templateAsHole(info, _ref4) {
+    var type = _ref4.type,
+        args = _ref4.args;
+    var hole = new Hole(type, tta.apply(null, args));
+    unrollArray$1(info, hole.args, createCounter(info));
+    return hole;
+  };
+
+  var unroll$1 = function unroll(_ref5, _ref6, counter) {
+    var stack = _ref5.stack;
+    var fn = _ref6.fn,
+        args = _ref6.args;
     var i = counter.i,
         iLength = counter.iLength;
     var unknown = i === iLength;
@@ -2191,9 +2199,9 @@ var neverland = (function (exports) {
     }
   };
 
-  var view = function view(entry, _ref6) {
-    var type = _ref6.type,
-        args = _ref6.args;
+  var view = function view(entry, _ref7) {
+    var type = _ref7.type,
+        args = _ref7.args;
     var lighter = type === 'html' ? html : svg;
     return lighter["for"](entry, type).apply(null, args);
   };

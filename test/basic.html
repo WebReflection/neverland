@@ -9,9 +9,15 @@
   <script defer type="module">
   const {default: $, render, html, useEffect, useState} = window.neverland;
 
-  render(document.body, html`<button>Click</button>`);
+  render(direct, html`<button>Click</button>`);
 
+  const Button = (props) => html`<button type="button">${ props.title }</button>`;
+
+  render(indirect, html`<div>Click me: ${ Button({ title: 'Click' }) }</div>`);
   </script>
 </head>
-<body></body>
+<body>
+  <div id="direct"></div>
+  <div id="indirect"></div>
+</body>
 </html>

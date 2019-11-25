@@ -23,9 +23,7 @@ export const render = (where, what) => {
     where,
     hook instanceof Hook ?
       retrieve(cache.get(where) || setCache(where), hook) :
-      (hook instanceof Template ?
-        new Hole(hook.type, tta.apply(null, hook.args)) :
-        hook)
+      templateAsHole(newInfo(), hook)
   );
 };
 
@@ -80,6 +78,12 @@ const setCache = where => {
   const info = {stack: []};
   cache.set(where, info);
   return info;
+};
+
+const templateAsHole = (info, {type, args}) => {
+  const hole = new Hole(type, tta.apply(null, args));
+  unrollArray(info, hole.args, createCounter(info));
+  return hole;
 };
 
 const unroll = ({stack}, {fn, args}, counter) => {
