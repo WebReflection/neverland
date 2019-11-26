@@ -126,10 +126,10 @@ You can still decide to wrap any callback that returns `html` or `svg` templates
 
 Common ways via bundlers or CDNs:
 
-  * globally, as `const {default: neverland, html, useState} = window.neverland` through _script_ with source `https://unpkg.com/neverland`
-  * CJS via `const {default: neverland, html, useState} = require('neverland')`
-  * ESM with bundlers via `import neverland, {html, useState} from 'neverland'`
-  * pure ESM via `import neverland, {html, useState} from 'https://unpkg.com/neverland?module'`
+  * globally, as `const {neverland: $, render, html, useState} = window.neverland` through _script_ with source `https://unpkg.com/neverland`
+  * CJS via `const {default: $, render, html, useState} = require('neverland')`
+  * ESM with bundlers via `import {neverland as $, render, html, useState} from 'neverland'`
+  * pure ESM via `import {neverland as $, render, html, useState} from 'https://unpkg.com/neverland?module'`
 
 If you use a bundler you can simply install `neverland` via npm or yarn.
 
@@ -144,11 +144,6 @@ const VirtualComp = neverland(...);
 const {neverland:$, html} = neverland;
 const VirtualComp = $(...);
 ```
-
-You can, of course, choose the right export name to whatever you think would suit.
-
-As example, I've used `MrSmee(...)` for the [test page](test/test.js), which you can also [test it live](https://webreflection.github.io/neverland/test/).
-
 
 
 ## V3 Features / Breaking Changes
