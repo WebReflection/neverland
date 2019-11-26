@@ -8,27 +8,19 @@
   <script src="../index.js"></script>
   <script defer type="module">
 
-const {createContext, useContext, useEffect, useMemo, useState, html, render} = neverland;
-const component = neverland.default;
+const {
+  neverland: $, html, render,
+  createContext, useContext, useEffect, useState
+} = neverland;
 
 const TickContext = createContext();
 
-const withTick = (child => props => {
-  const tick = useContext(TickContext);
-  
-  return child(Object.assign({}, props, {tick}));
-});
-
-const memo = (child => props => {
-  return useMemo(() => child(props), Object.keys(props).map(key => props[key]));
-});
-
 //Component tree
-const App = component(() => {
+const App = $(() => {
   const [tick, updateTick] = useState(0);
-  
+
   TickContext.provide(tick);
-  
+
   useEffect(() => {
     const onTick = ts => {
       updateTick(Math.round(performance.now()));
@@ -37,7 +29,7 @@ const App = component(() => {
     onTick();
     
   }, []);
-  
+
   return html`
     ${Basket([
       Fruit({label: "Apple"}),
@@ -48,17 +40,22 @@ const App = component(() => {
   `;
 });
 
-const Basket = ((children) => html`
+const Basket = (children => html`
     <ul class="basket">
       ${children.map(child => html`<li>${child}</li>`)}
     </ul>
 `);
 
-const Fruit =  component(memo((({label}) => html`
+const Fruit = ({label}) => html`
   <div class="fruit">last render: ${Math.round(performance.now())} ${label}</div>
-`)));
+`;
 
-const FruitWithTick = withTick(Fruit);
+const FruitWithTick = $(({label}) => {
+  const tick = useContext(TickContext);
+  return html`
+    <div class="fruit">last render: ${tick.current} ${label}</div>
+  `;
+});
 
 //render
 render(document.getElementById("app"), App);

@@ -10,7 +10,7 @@
 <body>
   <script>
 
-const { default: $, html, useRef } = neverland;
+const {neverland: $, render, html, useRef} = neverland;
 
 const TextInputWithFocusButton = $((value = '') => {
   const inputEl = useRef(null);
@@ -26,8 +26,10 @@ const TextInputWithFocusButton = $((value = '') => {
     `;
 });
 
-document.body.appendChild(TextInputWithFocusButton(1));
-document.body.appendChild(TextInputWithFocusButton(2));
+render(document.body, html`${[
+  TextInputWithFocusButton(1),
+  TextInputWithFocusButton(2)
+]}`);
 
   </script>
 </body>

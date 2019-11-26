@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script src="../index.js"></script>
+  <script type="module">
+const {neverland: $, html, render, useState} = neverland;
+
+const Button = $((props) => {
+  const [count, setCount] = useState(0);
+  const onClick = () => setCount(count + 1);
+  return html`<button onclick="${onClick}">${props.title} ${count}</button>`
+});
+
+const App = (props) => html`<div>${Button(props)}</div>`;
+
+const appProps = {title: 'Click:'};
+
+render(
+  document.body,
+  html`<div class="container">${App(appProps)}</div>`
+);
+
+  </script>
+</head>
+</html>

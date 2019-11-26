@@ -9,7 +9,7 @@
 </head>
 <body>
   <script>
-const {default: $, render, html, useRef, useState} = neverland;
+const {neverland: $, render, html, useRef, useState} = neverland;
 
 const Child = $((name, i) => html`
   <div>${name} ${i}</div>`
@@ -28,7 +28,7 @@ const App = $(() => {
       Child("apple", i),
       Child("banana", i),
       Child("cherry", i)
-    ])}
+    ].concat(Math.random() < .5 ? Child("temp", i) : []))}
   </div>
   `;
 });

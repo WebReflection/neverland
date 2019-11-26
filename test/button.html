@@ -7,11 +7,11 @@
   <title>DOM Augmentor</title>
   <script src="../index.js"></script>
   <script defer type="module">
-  const {default: $, render, html, useEffect, useState} = window.neverland;
+  const {neverland: $, render, html, useEffect, useState} = neverland;
 
   const text = 'hello';
 
-  const Button = text => $(() => {
+  const Button = $((text) => {
     useEffect(
       () => {
         console.log('connected');
@@ -28,11 +28,7 @@
     </button>`;
   });
 
-  const button = Button(text);
-
-  // document.body.appendChild(button());
-
-  render(document.body, button);
+  render(document.body, Button(text));
 
   </script>
 </head>

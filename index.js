@@ -2084,8 +2084,8 @@ var neverland = (function (exports) {
         i = _ref2.i,
         aLength = _ref2.aLength,
         iLength = _ref2.iLength;
-    if (a + 1 < aLength) sub.splice(a + 1);
-    if (i + 1 < iLength) stack.splice(i + 1);
+    if (a < aLength) sub.splice(a);
+    if (i < iLength) stack.splice(i);
   };
 
   var createCounter = function createCounter(_ref3) {
@@ -2155,6 +2155,7 @@ var neverland = (function (exports) {
       fn: fn,
       hook: null
     });
+    counter.i++;
     var entry = stack[i];
 
     if (unknown || entry.fn !== fn) {
@@ -2170,10 +2171,7 @@ var neverland = (function (exports) {
       var hook = args[i];
 
       if (typeof(hook) === 'object' && hook) {
-        if (hook instanceof Hook) {
-          counter.i++;
-          args[i] = unroll$1(info, hook, counter);
-        } else if (hook instanceof Template) {
+        if (hook instanceof Hook) args[i] = unroll$1(info, hook, counter);else if (hook instanceof Template) {
           unrollArray(info, hook.args, counter);
           args[i] = new Hole(hook.type, tta.apply(null, hook.args));
         } else if (isArray$1(hook)) {
