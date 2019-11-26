@@ -103,6 +103,25 @@ This hook is strictly _React_ oriented with no meaning in current _dom-augmentor
 
 
 
+### When should I wrap components, as in `const Comp = $(() => html...)`?
+
+Every time you wrap a component you grant yourself the used hooks within would run specifically for that component.
+
+However, if you create an extra hook, or your callback doesn't return either `html` or `svg` result, **you don't need to wrap it**.
+
+A simple rule of thumbs to know when a component should be wrapped or not is the following one:
+
+  * does this function/callback/arrow returns `html` or `svg` templates tag literals?
+  * if previous point is true, am I using any sort of direct, or composed, hook within such function, so that I want its state/results to be confined in the returned element, instead of side-effecting outer wrappers?
+
+If the answer to both points is **yes**, then you should wrap the callback, otherwise, you most likely shouldn't.
+
+This little thinking is currently needed due the fact there's no parsing or pre-processing in _neverland_, so that such wrapping cannot be done automatically for you, when needed.
+
+You can still decide to wrap any callback that returns `html` or `svg` templates tag literals results, but that might have performance implication in larger projects.
+
+
+
 ### How To ...
 
 Common ways via bundlers or CDNs:
