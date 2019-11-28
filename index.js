@@ -1561,8 +1561,6 @@ var neverland = (function (exports) {
       freeze = Object.freeze;
   var wireType = Wire.prototype.nodeType;
 
-  var OWNER_SVG_ELEMENT = 'ownerSVGElement'; // returns nodes from wires and components
-
   var asNode = function asNode(item, i) {
     return item.nodeType === wireType ? 1 / i < 0 ? i ? item.remove(true) : item.lastChild : i ? item.valueOf(true) : item.firstChild : item;
   }; // returns true if domdiff can handle the value
@@ -1675,9 +1673,11 @@ var neverland = (function (exports) {
     //    so that you can style=${{width: 120}}. In this case, the behavior has been
     //    fully inspired by Preact library and its simplicity.
     attribute: function attribute(node, name, original) {
+      var isSVG = this.type === 'svg';
+
       switch (name) {
         case 'class':
-          if (OWNER_SVG_ELEMENT in node) return hyperAttribute(node, original);
+          if (isSVG) return hyperAttribute(node, original);
           name = 'className';
 
         case 'data':
@@ -1685,15 +1685,15 @@ var neverland = (function (exports) {
           return hyperProperty(node, name);
 
         case 'style':
-          return hyperStyle(node, original, OWNER_SVG_ELEMENT in node);
+          return hyperStyle(node, original, isSVG);
 
         case 'ref':
           return hyperRef(node);
 
         default:
-          if (name.slice(0, 1) === '.') return hyperSetter(node, name.slice(1), OWNER_SVG_ELEMENT in node);
+          if (name.slice(0, 1) === '.') return hyperSetter(node, name.slice(1), isSVG);
           if (name.slice(0, 2) === 'on') return hyperEvent(node, name);
-          if (name in node && !(OWNER_SVG_ELEMENT in node || readOnly.test(name))) return hyperProperty(node, name);
+          if (name in node && !(isSVG || readOnly.test(name))) return hyperProperty(node, name);
           return hyperAttribute(node, original);
       }
     },
@@ -1710,9 +1710,7 @@ var neverland = (function (exports) {
         node: asNode,
         before: node
       };
-      var nodeType = OWNER_SVG_ELEMENT in node ?
-      /* istanbul ignore next */
-      'svg' : 'html';
+      var type = this.type;
       var fastPath = false;
       var oldValue;
 
@@ -1784,7 +1782,7 @@ var neverland = (function (exports) {
             } else if ('any' in value) {
               anyContent(value.any);
             } else if ('html' in value) {
-              childNodes = domdiff(node.parentNode, childNodes, slice.call(createContent([].concat(value.html).join(''), nodeType).childNodes), diffOptions);
+              childNodes = domdiff(node.parentNode, childNodes, slice.call(createContent([].concat(value.html).join(''), type).childNodes), diffOptions);
             } else if ('length' in value) {
               anyContent(slice.call(value));
             }
@@ -1909,8 +1907,8 @@ var neverland = (function (exports) {
         i = counter.i,
         aLength = counter.aLength,
         iLength = counter.iLength;
-    if (a + 1 < aLength) sub.splice(a + 1);
-    if (i + 1 < iLength) stack.splice(i + 1);
+    if (a < aLength) sub.splice(a);
+    if (i < iLength) stack.splice(i);
     return wire;
   };
 
@@ -1932,6 +1930,7 @@ var neverland = (function (exports) {
       tag: null,
       wire: null
     });
+    counter.i++;
     unrollArray(Tagger, info, args, counter);
     var entry = stack[i];
     if (i < iLength && entry.id === args[0] && entry.type === type) entry.tag.apply(null, args);else {
@@ -1948,10 +1947,7 @@ var neverland = (function (exports) {
       var hole = args[i];
 
       if (typeof(hole) === 'object' && hole) {
-        if (hole instanceof Hole) {
-          counter.i++;
-          args[i] = unroll(Tagger, info, hole, counter);
-        } else if (isArray(hole)) {
+        if (hole instanceof Hole) args[i] = unroll(Tagger, info, hole, counter);else if (isArray(hole)) {
           for (var _i = 0, _length = hole.length; _i < _length; _i++) {
             var inner = hole[_i];
 
