@@ -33,7 +33,7 @@
   "dependencies": {
     "@ungap/template-tag-arguments": "^0.3.1",
     "@ungap/weakmap": "^0.1.4",
-    "dom-augmentor": "^1.4.0",
+    "dom-augmentor": "^2.0.0",
     "lighterhtml": "^2.0.7"
   },
   "devDependencies": {
