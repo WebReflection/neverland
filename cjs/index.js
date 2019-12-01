@@ -10,25 +10,44 @@ const {
   render: $render
 } = require('lighterhtml');
 
+const {create} = Object;
+const {isArray} = Array;
+
 const neverland = fn => (...args) => new Hook(fn, args);
 exports.neverland = neverland;
 
-const html = (...args) => new Template('html', args);
-exports.html = html;
 html.for = createFor($html);
+function html() {
+  return new Hole('html', tta.apply(null, arguments));
+}
+exports.html = html;
 
-const svg = (...args) => new Template('svg', args);
-exports.svg = svg;
 svg.for = createFor($svg);
+function svg() {
+  return new Hole('svg', tta.apply(null, arguments));
+}
+exports.svg = svg;
+
+const hooks = new WeakMap;
+const holes = new WeakMap;
+const cache = (wm, key, value) => {
+  wm.set(key, value);
+  return value;
+};
 
 const render = (where, what) => {
   const hook = typeof what === 'function' ? what() : what;
-  return $render(
-    where,
-    hook instanceof Hook ?
-      retrieve(cache.get(where) || setCache(where), hook) :
-      templateAsHole(newInfo(), hook)
-  );
+  if (hook instanceof Hook) {
+    const info = hooks.get(where) || cache(hooks, where, {stack: []});
+    return $render(where, retrieve(info, hook));
+  }
+  else {
+    const info = holes.get(where) || cache(holes, where, newInfo());
+    const counter = createCounter(info);
+    unrollArray(info, hook.args, counter);
+    cleanUp(info, counter);
+    return $render(where, hook);
+  }
 };
 exports.render = render;
 
@@ -45,11 +64,6 @@ exports.render = render;
   exports.useLayoutEffect = m.useLayoutEffect;
 })(require('dom-augmentor'));
 
-const {isArray} = Array;
-const {create} = Object;
-
-const cache = new WeakMap;
-
 const cleanUp = ({sub, stack}, {a, i, aLength, iLength}) => {
   if (a < aLength)
     sub.splice(a);
@@ -63,14 +77,14 @@ const createCounter = ({sub, stack}) => ({
 });
 
 const createHook = (info, entry) => augmentor(function () {
-  const template = entry.fn.apply(null, arguments);
-  if (template instanceof Template) {
+  const hole = entry.fn.apply(null, arguments);
+  if (hole instanceof Hole) {
     const counter = createCounter(info);
-    unrollArray(info, template.args, counter);
+    unrollArray(info, hole.args, counter);
     cleanUp(info, counter);
-    return view(entry, template);
+    return view(entry, hole);
   }
-  return template;
+  return hole;
 });
 
 const newInfo = () => ({sub: [], stack: []});
@@ -79,18 +93,6 @@ const retrieve = (info, hook) => unroll(info, hook, {
   i: 0,
   iLength: info.stack.length
 });
-
-const setCache = where => {
-  const info = {stack: []};
-  cache.set(where, info);
-  return info;
-};
-
-const templateAsHole = (info, {type, args}) => {
-  const hole = new Hole(type, tta.apply(null, args));
-  unrollArray(info, hole.args, createCounter(info));
-  return hole;
-};
 
 const unroll = ({stack}, {fn, args}, counter) => {
   const {i, iLength} = counter;
@@ -112,10 +114,8 @@ const unrollArray = (info, args, counter) => {
     if (typeof hook === 'object' && hook) {
       if (hook instanceof Hook)
         args[i] = unroll(info, hook, counter);
-      else if (hook instanceof Template) {
+      else if (hook instanceof Hole)
         unrollArray(info, hook.args, counter);
-        args[i] = new Hole(hook.type, tta.apply(null, hook.args));
-      }
       else if (isArray(hook)) {
         for (let i = 0, {length} = hook; i < length; i++) {
           const inner = hook[i];
@@ -128,10 +128,8 @@ const unrollArray = (info, args, counter) => {
               counter.a++;
               hook[i] = retrieve(sub[a], inner);
             }
-            else if (inner instanceof Template) {
+            else if (inner instanceof Hole)
               unrollArray(info, inner.args, counter);
-              hook[i] = new Hole(inner.type, tta.apply(null, inner.args));
-            }
           }
         }
       }
@@ -139,18 +137,13 @@ const unrollArray = (info, args, counter) => {
   }
 };
 
-const view = (entry, {type, args}) => {
-  const lighter = type === 'html' ? $html : $svg;
-  return lighter.for(entry, type).apply(null, args);
-};
+const view = (entry, {type, args}) =>
+              (type === 'svg' ? $svg : $html)
+                .for(entry, type)
+                .apply(null, args);
 
 function Hook(fn, args) {
   this.fn = fn;
-  this.args = args;
-}
-
-function Template(type, args) {
-  this.type = type;
   this.args = args;
 }
 
