@@ -1985,6 +1985,8 @@ var neverland = (function (exports) {
       html = _createRender.html,
       svg = _createRender.svg;
 
+  var create$1 = Object.create;
+  var isArray$1 = Array.isArray;
   var neverland = function neverland(fn) {
     return function () {
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
@@ -1994,29 +1996,39 @@ var neverland = (function (exports) {
       return new Hook(fn, args);
     };
   };
-  var html$1 = function html() {
-    for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-      args[_key2] = arguments[_key2];
-    }
-
-    return new Template('html', args);
-  };
   html$1["for"] = createFor(html);
-  var svg$1 = function svg() {
-    for (var _len3 = arguments.length, args = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-      args[_key3] = arguments[_key3];
-    }
-
-    return new Template('svg', args);
-  };
+  function html$1() {
+    return new Hole('html', tta.apply(null, arguments));
+  }
   svg$1["for"] = createFor(svg);
+  function svg$1() {
+    return new Hole('svg', tta.apply(null, arguments));
+  }
+  var hooks$1 = new WeakMap$1();
+  var holes = new WeakMap$1();
+
+  var cache$1 = function cache(wm, key, value) {
+    wm.set(key, value);
+    return value;
+  };
+
   var render$1 = function render$1(where, what) {
     var hook = typeof what === 'function' ? what() : what;
-    return render(where, hook instanceof Hook ? retrieve$1(cache$1.get(where) || setCache$1(where), hook) : templateAsHole(newInfo$1(), hook));
+
+    if (hook instanceof Hook) {
+      var info = hooks$1.get(where) || cache$1(hooks$1, where, {
+        stack: []
+      });
+      return render(where, retrieve$1(info, hook));
+    } else {
+      var _info = holes.get(where) || cache$1(holes, where, newInfo$1());
+
+      var counter = createCounter(_info);
+      unrollArray$1(_info, hook.args, counter);
+      cleanUp(_info, counter);
+      return render(where, hook);
+    }
   };
-  var isArray$1 = Array.isArray;
-  var create$1 = Object.create;
-  var cache$1 = new WeakMap$1();
 
   var cleanUp = function cleanUp(_ref, _ref2) {
     var sub = _ref.sub,
@@ -2042,16 +2054,16 @@ var neverland = (function (exports) {
 
   var createHook = function createHook(info, entry) {
     return augmentor$1(function () {
-      var template = entry.fn.apply(null, arguments);
+      var hole = entry.fn.apply(null, arguments);
 
-      if (template instanceof Template) {
+      if (hole instanceof Hole) {
         var counter = createCounter(info);
-        unrollArray$1(info, template.args, counter);
+        unrollArray$1(info, hole.args, counter);
         cleanUp(info, counter);
-        return view(entry, template);
+        return view(entry, hole);
       }
 
-      return template;
+      return hole;
     });
   };
 
@@ -2069,26 +2081,10 @@ var neverland = (function (exports) {
     });
   };
 
-  var setCache$1 = function setCache(where) {
-    var info = {
-      stack: []
-    };
-    cache$1.set(where, info);
-    return info;
-  };
-
-  var templateAsHole = function templateAsHole(info, _ref4) {
-    var type = _ref4.type,
-        args = _ref4.args;
-    var hole = new Hole(type, tta.apply(null, args));
-    unrollArray$1(info, hole.args, createCounter(info));
-    return hole;
-  };
-
-  var unroll$1 = function unroll(_ref5, _ref6, counter) {
-    var stack = _ref5.stack;
-    var fn = _ref6.fn,
-        args = _ref6.args;
+  var unroll$1 = function unroll(_ref4, _ref5, counter) {
+    var stack = _ref4.stack;
+    var fn = _ref5.fn,
+        args = _ref5.args;
     var i = counter.i,
         iLength = counter.iLength;
     var unknown = i === iLength;
@@ -2112,10 +2108,7 @@ var neverland = (function (exports) {
       var hook = args[i];
 
       if (typeof(hook) === 'object' && hook) {
-        if (hook instanceof Hook) args[i] = unroll$1(info, hook, counter);else if (hook instanceof Template) {
-          unrollArray(info, hook.args, counter);
-          args[i] = new Hole(hook.type, tta.apply(null, hook.args));
-        } else if (isArray$1(hook)) {
+        if (hook instanceof Hook) args[i] = unroll$1(info, hook, counter);else if (hook instanceof Hole) unrollArray(info, hook.args, counter);else if (isArray$1(hook)) {
           for (var _i = 0, _length = hook.length; _i < _length; _i++) {
             var inner = hook[_i];
 
@@ -2127,10 +2120,7 @@ var neverland = (function (exports) {
                 if (a === aLength) counter.aLength = sub.push(newInfo$1());
                 counter.a++;
                 hook[_i] = retrieve$1(sub[a], inner);
-              } else if (inner instanceof Template) {
-                unrollArray(info, inner.args, counter);
-                hook[_i] = new Hole(inner.type, tta.apply(null, inner.args));
-              }
+              } else if (inner instanceof Hole) unrollArray(info, inner.args, counter);
             }
           }
         }
@@ -2138,20 +2128,14 @@ var neverland = (function (exports) {
     }
   };
 
-  var view = function view(entry, _ref7) {
-    var type = _ref7.type,
-        args = _ref7.args;
-    var lighter = type === 'html' ? html : svg;
-    return lighter["for"](entry, type).apply(null, args);
+  var view = function view(entry, _ref6) {
+    var type = _ref6.type,
+        args = _ref6.args;
+    return (type === 'svg' ? svg : html)["for"](entry, type).apply(null, args);
   };
 
   function Hook(fn, args) {
     this.fn = fn;
-    this.args = args;
-  }
-
-  function Template(type, args) {
-    this.type = type;
     this.args = args;
   }
 
@@ -2170,8 +2154,8 @@ var neverland = (function (exports) {
       return function () {
         var counter = createCounter(info);
 
-        for (var _len4 = arguments.length, args = new Array(_len4), _key4 = 0; _key4 < _len4; _key4++) {
-          args[_key4] = arguments[_key4];
+        for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+          args[_key2] = arguments[_key2];
         }
 
         unrollArray$1(info, args, counter);
