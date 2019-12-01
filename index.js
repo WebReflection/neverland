@@ -268,52 +268,6 @@ var neverland = (function (exports) {
     }
   }
 
-  /*! (c) Andrea Giammarchi - ISC */
-  var curr = null;
-  var augmentor = function augmentor(fn) {
-    var stack = [];
-    return function hook() {
-      var prev = curr;
-      var after = [];
-      curr = {
-        hook: hook,
-        args: arguments,
-        stack: stack,
-        i: 0,
-        after: after
-      };
-
-      try {
-        return fn.apply(null, arguments);
-      } finally {
-        curr = prev;
-
-        for (var i = 0, length = after.length; i < length; i++) {
-          after[i]();
-        }
-      }
-    };
-  };
-  var contextual = function contextual(fn) {
-    var context = null;
-    var augmented = augmentor(function () {
-      return fn.apply(context, arguments);
-    });
-    return function () {
-      context = this;
-      return augmented.apply(this, arguments);
-    };
-  };
-  var current = function current() {
-    return curr;
-  };
-  function different(value, i) {
-    return value !== this[i];
-  }
-  var isFunction = function isFunction(fn) {
-    return typeof fn === 'function';
-  };
-
   var compat = typeof cancelAnimationFrame === 'function';
   var cAF = compat ? cancelAnimationFrame : clearTimeout;
   var rAF = compat ? requestAnimationFrame : setTimeout;
@@ -352,9 +306,53 @@ var neverland = (function (exports) {
   }
 
   /*! (c) Andrea Giammarchi - ISC */
+  var state = null; // main exports
+
+  var augmentor = function augmentor(fn) {
+    var stack = [];
+    return function hook() {
+      var prev = state;
+      var after = [];
+      state = {
+        hook: hook,
+        args: arguments,
+        stack: stack,
+        i: 0,
+        length: stack.length,
+        after: after
+      };
+
+      try {
+        return fn.apply(null, arguments);
+      } finally {
+        state = prev;
+
+        for (var i = 0, length = after.length; i < length; i++) {
+          after[i]();
+        }
+      }
+    };
+  };
+  var contextual = function contextual(fn) {
+    var context = null;
+    var augmented = augmentor(function () {
+      return fn.apply(context, arguments);
+    });
+    return function () {
+      context = this;
+      return augmented.apply(this, arguments);
+    };
+  }; // useState
+
   var updates = new WeakMap();
 
-  var update = function update(hook, ctx, args) {
+  var setRaf = function setRaf(hook) {
+    var update = reraf();
+    updates.set(hook, update);
+    return update;
+  };
+
+  var hookdate = function hookdate(hook, ctx, args) {
     hook.apply(ctx, args);
   };
 
@@ -363,37 +361,47 @@ var neverland = (function (exports) {
     always: false
   };
   var useState = function useState(value, options) {
-    var state = current();
-    var i = state.i++;
-    var hook = state.hook,
-        args = state.args,
-        stack = state.stack;
+    var _state = state,
+        hook = _state.hook,
+        args = _state.args,
+        stack = _state.stack,
+        i = _state.i,
+        length = _state.length;
 
     var _ref = options || defaults,
         asy = _ref.async,
         always = _ref.always;
 
-    if (stack.length <= i) {
-      stack[i] = isFunction(value) ? value() : value;
-      if (!updates.has(hook)) updates.set(hook, asy ? reraf() : update);
-    }
+    if (i === length) state.length = stack.push({
+      $: typeof value === 'function' ? value() : value,
+      _: asy ? updates.get(hook) || setRaf(hook) : hookdate
+    });
+    var ref = stack[state.i++];
+    return [ref.$, function (value) {
+      var $value = typeof value === 'function' ? value(ref.$) : value;
 
-    return [stack[i], function (value) {
-      var newValue = isFunction(value) ? value(stack[i]) : value;
+      if (always || ref.$ !== $value) {
+        ref.$ = $value;
 
-      if (always || stack[i] !== newValue) {
-        stack[i] = newValue;
-        updates.get(hook)(hook, null, args);
+        ref._(hook, null, args);
       }
     }];
-  };
+  }; // useReducer
 
-  /*! (c) Andrea Giammarchi - ISC */
+  var useReducer = function useReducer(reducer, value, init, options) {
+    var fn = typeof init === 'function'; // avoid `cons [state, update] = ...` Babel destructuring bloat
+
+    var pair = useState(fn ? init(value) : value, fn ? options : init);
+    return [pair[0], function (value) {
+      pair[1](reducer(pair[0], value));
+    }];
+  }; // useContext
+
   var hooks = new WeakMap();
 
-  var invoke = function invoke(_ref) {
-    var hook = _ref.hook,
-        args = _ref.args;
+  var invoke = function invoke(_ref2) {
+    var hook = _ref2.hook,
+        args = _ref2.args;
     hook.apply(null, args);
   };
 
@@ -406,16 +414,15 @@ var neverland = (function (exports) {
     return context;
   };
   var useContext = function useContext(context) {
-    var _current = current(),
-        hook = _current.hook,
-        args = _current.args;
-
+    var _state2 = state,
+        hook = _state2.hook,
+        args = _state2.args;
     var stack = hooks.get(context);
     var info = {
       hook: hook,
       args: args
     };
-    if (!stack.some(update$1, info)) stack.push(info);
+    if (!stack.some(update, info)) stack.push(info);
     return context.value;
   };
 
@@ -426,28 +433,39 @@ var neverland = (function (exports) {
     }
   }
 
-  function update$1(_ref2) {
-    var hook = _ref2.hook;
+  function update(_ref3) {
+    var hook = _ref3.hook;
     return hook === this.hook;
-  }
+  } // useEffect, useLayoutEffect, dropEffect
 
-  /*! (c) Andrea Giammarchi - ISC */
+
   var effects = new WeakMap();
 
   var stop = function stop() {};
 
+  var setFX = function setFX(hook) {
+    var details = {
+      stack: [],
+      update: reraf()
+    };
+    effects.set(hook, details);
+    return details;
+  };
+
   var createEffect = function createEffect(sync) {
     return function (effect, guards) {
-      var state = current();
-      var i = state.i++;
-      var hook = state.hook,
-          stack = state.stack,
-          after = state.after;
+      var _state3 = state,
+          hook = _state3.hook,
+          after = _state3.after,
+          stack = _state3.stack,
+          i = _state3.i,
+          length = _state3.length;
+      state.i++;
 
-      if (i < stack.length) {
+      if (i < length) {
         var info = stack[i];
         var clean = info.clean,
-            update = info.update,
+            _update = info.update,
             values = info.values;
 
         if (!guards || guards.some(different, values)) {
@@ -458,32 +476,28 @@ var neverland = (function (exports) {
             clean();
           }
 
-          var invoke = function invoke() {
+          var _invoke = function _invoke() {
             info.clean = effect();
           };
 
-          if (sync) after.push(invoke);else update(invoke);
+          if (sync) after.push(_invoke);else _update(_invoke);
         }
       } else {
-        if (!effects.has(hook)) effects.set(hook, {
-          stack: [],
-          update: reraf()
-        });
-        var details = effects.get(hook);
+        var details = effects.get(hook) || setFX(hook);
         var _info = {
           clean: null,
           stop: stop,
           update: details.update,
           values: guards
         };
-        stack[i] = _info;
+        state.length = stack.push(_info);
         details.stack.push(_info);
 
-        var _invoke = function _invoke() {
+        var _invoke2 = function _invoke2() {
           _info.clean = effect();
         };
 
-        if (sync) after.push(_invoke);else _info.stop = details.update(_invoke);
+        if (sync) after.push(_invoke2);else _info.stop = details.update(_invoke2);
       }
     };
   };
@@ -491,7 +505,8 @@ var neverland = (function (exports) {
   var useEffect = createEffect(false);
   var useLayoutEffect = createEffect(true);
   var dropEffect = function dropEffect(hook) {
-    if (effects.has(hook)) effects.get(hook).stack.forEach(function (info) {
+    var fx = effects.get(hook);
+    if (fx) fx.stack.forEach(function (info) {
       var clean = info.clean,
           stop = info.stop;
       stop();
@@ -502,43 +517,42 @@ var neverland = (function (exports) {
       }
     });
   };
+  var hasEffect = effects.has.bind(effects); // useMemo, useCallback
 
-  /*! (c) Andrea Giammarchi - ISC */
   var useMemo = function useMemo(memo, guards) {
-    var state = current();
-    var i = state.i++;
-    var stack = state.stack;
-    if (!guards || stack.length <= i || guards.some(different, stack[i].values)) stack[i] = {
-      current: memo(),
-      values: guards
+    var _state4 = state,
+        stack = _state4.stack,
+        i = _state4.i,
+        length = _state4.length;
+    if (i === length) state.length = stack.push({
+      $: memo(),
+      _: guards
+    });else if (!guards || guards.some(different, stack[i]._)) stack[i] = {
+      $: memo(),
+      _: guards
     };
-    return stack[i].current;
+    return stack[state.i++].$;
   };
   var useCallback = function useCallback(fn, guards) {
     return useMemo(function () {
       return fn;
     }, guards);
-  };
+  }; // useRef
 
-  /*! (c) Andrea Giammarchi - ISC */
-  var useReducer = function useReducer(reducer, value, init, options) {
-    var fn = typeof init === 'function'; // avoid `cons [state, update] = ...` Babel destructuring bloat
-
-    var pair = useState(fn ? init(value) : value, fn ? options : init);
-    return [pair[0], function (value) {
-      pair[1](reducer(pair[0], value));
-    }];
-  };
-
-  /*! (c) Andrea Giammarchi - ISC */
   var useRef = function useRef(value) {
-    var state = current();
-    var i = state.i++;
-    var stack = state.stack;
-    return i < stack.length ? stack[i] : stack[i] = {
+    var _state5 = state,
+        stack = _state5.stack,
+        i = _state5.i,
+        length = _state5.length;
+    if (i === length) state.length = stack.push({
       current: value
-    };
+    });
+    return stack[state.i++];
   };
+
+  function different(value, i) {
+    return value !== this[i];
+  }
 
   /*! (c) Andrea Giammarchi - ISC */
 
@@ -574,26 +588,15 @@ var neverland = (function (exports) {
     }
   };
 
-  var effect = false;
   var augmentor$1 = function augmentor$1(fn) {
-    var hook = augmentor(fn);
     var handler = null;
+    var hook = augmentor(fn);
     return function () {
-      effect = false;
       var node = hook.apply(this, arguments);
-
-      if (effect) {
-        effect = false;
-        observer(node, handler || (handler = dropEffect.bind(null, hook)));
-      }
-
+      if (hasEffect(hook)) observer(node, handler || (handler = dropEffect.bind(null, hook)));
       return node;
     };
   };
-  function useEffect$1() {
-    effect = true;
-    return useEffect.apply(null, arguments);
-  }
 
   /*! (c) Andrea Giammarchi - ISC */
   // Custom
@@ -2186,7 +2189,7 @@ var neverland = (function (exports) {
   exports.svg = svg$1;
   exports.useCallback = useCallback;
   exports.useContext = useContext;
-  exports.useEffect = useEffect$1;
+  exports.useEffect = useEffect;
   exports.useLayoutEffect = useLayoutEffect;
   exports.useMemo = useMemo;
   exports.useReducer = useReducer;
