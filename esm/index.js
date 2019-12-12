@@ -89,11 +89,10 @@ const retrieve = (info, hook) => unroll(info, hook, {
 });
 
 const unroll = ({stack}, {fn, args}, counter) => {
-  const {i, iLength} = counter;
-  const unknown = i === iLength;
+  const i = counter.i++;
+  const unknown = i === counter.iLength;
   if (unknown)
     counter.iLength = stack.push({fn, hook: null});
-  counter.i++;
   const entry = stack[i];
   if (unknown || entry.fn !== fn) {
     entry.fn = fn;
@@ -116,10 +115,9 @@ const unrollArray = (info, args, counter) => {
           if (typeof inner === 'object' && inner) {
             if (inner instanceof Hook) {
               const {sub} = info;
-              const {a, aLength} = counter;
-              if (a === aLength)
+              const a = counter.a++;
+              if (a === counter.aLength)
                 counter.aLength = sub.push(newInfo());
-              counter.a++;
               hook[i] = retrieve(sub[a], inner);
             }
             else if (inner instanceof Hole)

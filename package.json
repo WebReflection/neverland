@@ -33,8 +33,8 @@
   "dependencies": {
     "@ungap/template-tag-arguments": "^0.3.1",
     "@ungap/weakmap": "^0.1.4",
-    "dom-augmentor": "^2.0.3",
-    "lighterhtml": "^2.0.7"
+    "dom-augmentor": "^2.0.4",
+    "lighterhtml": "^2.0.8"
   },
   "devDependencies": {
     "@babel/core": "^7.7.5",
@@ -44,7 +44,7 @@
     "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.12.0",
     "nightmare": "^3.0.2",
-    "rollup": "^1.27.9",
+    "rollup": "^1.27.11",
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-node-resolve": "^5.2.0",
     "uglify-es": "^3.3.9"
