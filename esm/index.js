@@ -51,7 +51,7 @@ export const neverland = fn => (...args) => new Hook(fn, args);
 /**
  * @typedef {{
  *  (...args: any[]): Hole;
- *  for: (entry: IEntry, id: string) => (...args: any[]) => any
+ *  for: (entry: IEntry, id?: string) => (...args: any[]) => any
  * }} IRenderer
  */
 
@@ -258,7 +258,7 @@ function createFor(lighter) {
   return (
     /**
      * @param {IEntry} entry
-     * @param {string} id
+     * @param {string} [id]
      */
     (entry, id) => {
       const store = cache.get(entry) || setCache(entry);

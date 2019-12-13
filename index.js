@@ -1985,8 +1985,42 @@ var neverland = (function (exports) {
       html = _createRender.html,
       svg = _createRender.svg;
 
+  /**
+   * @typedef {<K>(template: TemplateStringsArray, ...values: any[]) => K} ITagFunction
+   */
+
+  /**
+   * An interface describing hooks counter
+   * @typedef ICounter
+   * @prop {number} a
+   * @prop {number} aLength
+   * @prop {number} i
+   * @prop {number} iLength
+   */
+
+  /**
+   * An interface describing hooks info
+   * @typedef IInfo
+   * @prop {IInfo[]} [sub]
+   * @prop {IEntry[]} stack
+   */
+
+  /**
+   * @typedef IEntry
+   * @prop {any} hook
+   * @prop {*} fn
+   */
+
+  /**
+   * @typedef {<T>(wm: WeakMap<object, T>, key: any, value: T) => T} CacheFn
+   */
+
   var create$1 = Object.create;
   var isArray$1 = Array.isArray;
+  /**
+   * @param {<T>(...args: any[]) => T} fn
+   */
+
   var neverland = function neverland(fn) {
     return function () {
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
@@ -1996,21 +2030,48 @@ var neverland = (function (exports) {
       return new Hook(fn, args);
     };
   };
-  html$1["for"] = createFor(html);
+  /**
+   * @typedef {{
+   *  (...args: any[]): Hole;
+   *  for: (entry: IEntry, id?: string) => (...args: any[]) => any
+   * }} IRenderer
+   */
+
+  /**
+   * @type {IRenderer}
+   */
+
   function html$1() {
     return new Hole('html', tta.apply(null, arguments));
   }
-  svg$1["for"] = createFor(svg);
+  html$1["for"] = createFor(html);
+  /**
+   * @type {IRenderer}
+   */
+
   function svg$1() {
     return new Hole('svg', tta.apply(null, arguments));
   }
+  svg$1["for"] = createFor(svg);
+  /**
+   * @type {WeakMap<object, IInfo>}
+   */
+
   var hooks$1 = new WeakMap$1();
   var holes = new WeakMap$1();
+  /**
+   * @type {CacheFn}
+   */
 
   var cache$1 = function cache(wm, key, value) {
     wm.set(key, value);
     return value;
   };
+  /**
+   * @param {Node} where
+   * @param {any} what
+   */
+
 
   var render$1 = function render$1(where, what) {
     var hook = typeof what === 'function' ? what() : what;
@@ -2018,7 +2079,8 @@ var neverland = (function (exports) {
     if (hook instanceof Hook) {
       var info = hooks$1.get(where) || cache$1(hooks$1, where, {
         stack: []
-      });
+      }); // no sub?
+
       return render(where, retrieve$1(info, hook));
     } else {
       var _info = holes.get(where) || cache$1(holes, where, newInfo$1());
@@ -2029,6 +2091,11 @@ var neverland = (function (exports) {
       return render(where, hook);
     }
   };
+  /**
+   * todo: describe cleanup
+   * @param {IInfo} param0
+   * @param {ICounter} param1
+   */
 
   var cleanUp = function cleanUp(_ref, _ref2) {
     var sub = _ref.sub,
@@ -2040,6 +2107,12 @@ var neverland = (function (exports) {
     if (a < aLength) sub.splice(a);
     if (i < iLength) stack.splice(i);
   };
+  /**
+   * todo: describe create counter
+   * @param {IInfo} param0
+   * @returns {ICounter}
+   */
+
 
   var createCounter = function createCounter(_ref3) {
     var sub = _ref3.sub,
@@ -2051,6 +2124,11 @@ var neverland = (function (exports) {
       iLength: stack.length
     };
   };
+  /**
+   * @param {IInfo} info
+   * @param {IEntry} entry
+   */
+
 
   var createHook = function createHook(info, entry) {
     return augmentor$1(function () {
@@ -2066,6 +2144,10 @@ var neverland = (function (exports) {
       return hole;
     });
   };
+  /**
+   * @returns {IInfo}
+   */
+
 
   var newInfo$1 = function newInfo() {
     return {
@@ -2073,6 +2155,11 @@ var neverland = (function (exports) {
       stack: []
     };
   };
+  /**
+   * @param {IInfo} info
+   * @param {Hook} hook
+   */
+
 
   var retrieve$1 = function retrieve(info, hook) {
     return unroll$1(info, hook, {
@@ -2080,6 +2167,12 @@ var neverland = (function (exports) {
       iLength: info.stack.length
     });
   };
+  /**
+   * @param {IInfo} param0
+   * @param {Hook} param1
+   * @param {Pick<ICounter, 'i' | 'iLength'>} counter why partial ICounter?
+   */
+
 
   var unroll$1 = function unroll(_ref4, _ref5, counter) {
     var stack = _ref4.stack;
@@ -2100,6 +2193,12 @@ var neverland = (function (exports) {
 
     return entry.hook.apply(null, args);
   };
+  /**
+   * @param {IInfo} info
+   * @param {any} args
+   * @param {ICounter} counter
+   */
+
 
   var unrollArray$1 = function unrollArray(info, args, counter) {
     for (var i = 1, length = args.length; i < length; i++) {
@@ -2123,20 +2222,41 @@ var neverland = (function (exports) {
       }
     }
   };
+  /**
+   * @param {IEntry} entry
+   * @param {Hole} param1
+   */
+
 
   var view = function view(entry, _ref6) {
     var type = _ref6.type,
         args = _ref6.args;
     return (type === 'svg' ? svg : html)["for"](entry, type).apply(null, args);
   };
+  /**
+   * @class
+   * @param {Function} fn
+   * @param {any[]} args
+   */
+
 
   function Hook(fn, args) {
     this.fn = fn;
     this.args = args;
   }
+  /**
+   * @param {import('lighterhtml').Tag<HTMLElement | SVGElement>} lighter 
+   */
+
 
   function createFor(lighter) {
+    /**
+     * @type {WeakMap<IEntry, Record<string, IInfo>>}
+     */
     var cache = new WeakMap$1();
+    /**
+     * @returns {Record<string, IInfo>}
+     */
 
     var setCache = function setCache(entry) {
       var store = create$1(null);
@@ -2144,21 +2264,32 @@ var neverland = (function (exports) {
       return store;
     };
 
-    return function (entry, id) {
-      var store = cache.get(entry) || setCache(entry);
-      var info = store[id] || (store[id] = newInfo$1());
-      return function () {
-        var counter = createCounter(info);
+    return (
+      /**
+       * @param {IEntry} entry
+       * @param {string} [id]
+       */
+      function (entry, id) {
+        var store = cache.get(entry) || setCache(entry);
+        var info = store[id] || (store[id] = newInfo$1());
+        return (
+          /**
+           * @param {any[]} args
+           */
+          function () {
+            var counter = createCounter(info);
 
-        for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-          args[_key2] = arguments[_key2];
-        }
+            for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+              args[_key2] = arguments[_key2];
+            }
 
-        unrollArray$1(info, args, counter);
-        cleanUp(info, counter);
-        return lighter["for"](entry, id).apply(null, args);
-      };
-    };
+            unrollArray$1(info, args, counter);
+            cleanUp(info, counter);
+            return lighter["for"](entry, id).apply(null, args);
+          }
+        );
+      }
+    );
   }
 
   exports.contextual = contextual;

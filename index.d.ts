@@ -1,10 +1,24 @@
-export const html: IRenderer;
-export const svg: IRenderer;
+/**
+ * @typedef {{
+ *  (...args: any[]): Hole;
+ *  for: (entry: IEntry, id?: string) => (...args: any[]) => any
+ * }} IRenderer
+ */
+/**
+ * @type {IRenderer}
+ */
+export function html(...args: any[]): Hole;
+export namespace html { }
+/**
+ * @type {IRenderer}
+ */
+export function svg(...args: any[]): Hole;
+export namespace svg { }
 export function neverland(fn: <T>(...args: any[]) => T): (...args: any[]) => Hook;
 export function render(where: Node, what: any): Node;
 export type IRenderer = {
     (...args: any[]): Hole;
-    for: (entry: IEntry, id: string) => (...args: any[]) => any;
+    for: (entry: IEntry, id?: string) => (...args: any[]) => any;
 };
 export type ITagFunction = <K>(template: TemplateStringsArray, ...values: any[]) => K;
 /**
