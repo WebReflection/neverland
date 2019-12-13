@@ -127,7 +127,7 @@ You can still decide to wrap any callback that returns `html` or `svg` templates
 Common ways via bundlers or CDNs:
 
   * globally, as `const {neverland: $, render, html, useState} = window.neverland` through _script_ with source `https://unpkg.com/neverland`
-  * CJS via `const {default: $, render, html, useState} = require('neverland')`
+  * CJS via `const {neverland: $, render, html, useState} = require('neverland')`
   * ESM with bundlers via `import {neverland as $, render, html, useState} from 'neverland'`
   * pure ESM via `import {neverland as $, render, html, useState} from 'https://unpkg.com/neverland?module'`
 
