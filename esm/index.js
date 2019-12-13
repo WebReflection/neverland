@@ -43,6 +43,9 @@ import {
 const {create} = Object;
 const {isArray} = Array;
 
+/**
+ * @param {<T>(...args: any[]) => T} fn
+ */
 export const neverland = fn => (...args) => new Hook(fn, args);
 
 html.for = createFor($html);
@@ -69,6 +72,10 @@ const cache = (wm, key, value) => {
   return value;
 };
 
+/**
+ * @param {Node} where
+ * @param {any} what
+ */
 export const render = (where, what) => {
   const hook = typeof what === 'function' ? what() : what;
   if (hook instanceof Hook) {
@@ -120,7 +127,7 @@ const createCounter = ({sub, stack}) => ({
 
 /**
  * @param {IInfo} info
- * @param {*} entry
+ * @param {IEntry} entry
  */
 const createHook = (info, entry) => augmentor(function () {
   const hole = entry.fn.apply(null, arguments);
@@ -167,7 +174,7 @@ const unroll = ({stack}, {fn, args}, counter) => {
 
 /**
  * @param {IInfo} info
- * @param {*} args
+ * @param {any[]} args
  * @param {ICounter} counter
  */
 const unrollArray = (info, args, counter) => {
@@ -199,7 +206,7 @@ const unrollArray = (info, args, counter) => {
 };
 
 /**
- * @param {IInfo} entry
+ * @param {IEntry} entry
  * @param {Hole} param1
  */
 const view = (entry, {type, args}) =>
@@ -222,7 +229,7 @@ function Hook(fn, args) {
  */
 function createFor(lighter) {
   /**
-   * @type {WeakMap<object, Record<string, IInfo>>}
+   * @type {WeakMap<IEntry, Record<string, IInfo>>}
    */
   const cache = new WeakMap;
   /**
@@ -233,26 +240,26 @@ function createFor(lighter) {
     cache.set(entry, store);
     return store;
   };
-
-  /**
-   * @typedef {<T extends any[] = any[]>(...args: T) => } ILighterApplier
-   * @typedef {(entry, id: string) => } INeverland
-   */
   
   return (
     /**
-     * @param {*} entry
+     * @param {IEntry} entry
      * @param {string} id
      */
     (entry, id) => {
       const store = cache.get(entry) || setCache(entry);
       const info = store[id] || (store[id] = newInfo());
-      return (...args) => {
-        const counter = createCounter(info);
-        unrollArray(info, args, counter);
-        cleanUp(info, counter);
-        return lighter.for(entry, id).apply(null, args);
-      };
+      return (
+        /**
+         * @param {any[]} args
+         */
+        (...args) => {
+          const counter = createCounter(info);
+          unrollArray(info, args, counter);
+          cleanUp(info, counter);
+          return lighter.for(entry, id).apply(null, args);
+        }
+      );
     }
   );
 }
