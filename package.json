@@ -5,8 +5,10 @@
   "main": "cjs/index.js",
   "module": "esm/index.js",
   "unpkg": "min.js",
+  "types": "index.d.ts",
   "scripts": {
     "build": "npm run rollup && drop-babel-typeof index.js && npm run cjs && npm run min && npm run test && npm run size",
+    "build:typings": "tsc --allowJs --emitDeclarationOnly",
     "cjs": "ascjs esm cjs",
     "min": "echo '/*! (c) Andrea Giammarchi - ISC */' > min.js && uglifyjs index.js -c -m >> min.js",
     "rollup": "rollup --config rollup.config.js",
@@ -47,6 +49,7 @@
     "rollup": "^1.27.11",
     "rollup-plugin-babel": "^4.3.3",
     "rollup-plugin-node-resolve": "^5.2.0",
+    "typescript": "^3.7.3",
     "uglify-es": "^3.3.9"
   },
   "repository": {

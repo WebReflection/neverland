@@ -11,7 +11,7 @@ import {
 } from 'lighterhtml';
 
 /**
- * @typedef {<K, T extends any[] = any[]>(template: TemplateStringsArray, ...values: T) => K} ITagFunction
+ * @typedef {<K>(template: TemplateStringsArray, ...values: any[]) => K} ITagFunction
  */
 
 /**
@@ -48,15 +48,28 @@ const {isArray} = Array;
  */
 export const neverland = fn => (...args) => new Hook(fn, args);
 
-html.for = createFor($html);
+/**
+ * @typedef {{
+ *  (...args: any[]): Hole;
+ *  for: (entry: IEntry, id: string) => (...args: any[]) => any
+ * }} IRenderer
+ */
+
+/**
+ * @type {IRenderer}
+ */
 export function html() {
   return new Hole('html', tta.apply(null, arguments));
 };
+html.for = createFor($html);
 
-svg.for = createFor($svg);
+/**
+ * @type {IRenderer}
+ */
 export function svg() {
   return new Hole('svg', tta.apply(null, arguments));
 };
+svg.for = createFor($svg);
 
 /**
  * @type {WeakMap<object, IInfo>}
@@ -92,6 +105,7 @@ export const render = (where, what) => {
 };
 
 export {
+  // @ts-ignore why is this not typed in dom-augmentor?
   contextual,
   useState,
   useEffect,
@@ -174,7 +188,7 @@ const unroll = ({stack}, {fn, args}, counter) => {
 
 /**
  * @param {IInfo} info
- * @param {any[]} args
+ * @param {any} args
  * @param {ICounter} counter
  */
 const unrollArray = (info, args, counter) => {
