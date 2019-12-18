@@ -44,7 +44,9 @@ const {create} = Object;
 const {isArray} = Array;
 
 /**
- * @param {<T>(...args: any[]) => T} fn
+ * @template Args
+ * @param {(...args: Args[]) => unknown} fn
+ * @returns {(...args: Args[]) => Hook}
  */
 export const neverland = fn => (...args) => new Hook(fn, args);
 
