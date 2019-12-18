@@ -14,7 +14,7 @@ export namespace html { }
  */
 export function svg(...args: any[]): Hole;
 export namespace svg { }
-export function neverland(fn: <T>(...args: any[]) => T): (...args: any[]) => Hook;
+export function neverland<Args>(fn: (...args: Args[]) => unknown): (...args: Args[]) => Hook;
 export function render(where: Node, what: any): Node;
 export type IRenderer = {
     (...args: any[]): Hole;

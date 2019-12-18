@@ -2018,7 +2018,9 @@ var neverland = (function (exports) {
   var create$1 = Object.create;
   var isArray$1 = Array.isArray;
   /**
-   * @param {<T>(...args: any[]) => T} fn
+   * @template Args
+   * @param {(...args: Args[]) => unknown} fn
+   * @returns {(...args: Args[]) => Hook}
    */
 
   var neverland = function neverland(fn) {
