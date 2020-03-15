@@ -2,6 +2,8 @@
 import WeakMap from '@ungap/weakmap';
 import tta from '@ungap/template-tag-arguments';
 import {augmentor} from 'dom-augmentor';
+import {isArray} from 'uarray';
+import umap from 'umap';
 
 import {
   Hole,
@@ -41,7 +43,6 @@ import {
  */
 
 const {create} = Object;
-const {isArray} = Array;
 
 /**
  * @template Args
@@ -76,16 +77,8 @@ svg.for = createFor($svg);
 /**
  * @type {WeakMap<object, IInfo>}
  */
-const hooks = new WeakMap;
-const holes = new WeakMap;
-
-/**
- * @type {CacheFn}
- */
-const cache = (wm, key, value) => {
-  wm.set(key, value);
-  return value;
-};
+const hooks = umap(new WeakMap);
+const holes = umap(new WeakMap);
 
 /**
  * @param {Node} where
@@ -94,11 +87,11 @@ const cache = (wm, key, value) => {
 export const render = (where, what) => {
   const hook = typeof what === 'function' ? what() : what;
   if (hook instanceof Hook) {
-    const info = hooks.get(where) || cache(hooks, where, {stack: []}); // no sub?
+    const info = hooks.get(where) || hooks.set(where, {stack: []}); // no sub?
     return $render(where, retrieve(info, hook));
   }
   else {
-    const info = holes.get(where) || cache(holes, where, newInfo());
+    const info = holes.get(where) || holes.set(where, newInfo());
     const counter = createCounter(info);
     unrollArray(info, hook.args, counter);
     cleanUp(info, counter);
@@ -247,23 +240,15 @@ function createFor(lighter) {
   /**
    * @type {WeakMap<IEntry, Record<string, IInfo>>}
    */
-  const cache = new WeakMap;
-  /**
-   * @returns {Record<string, IInfo>}
-   */
-  const setCache = entry => {
-    const store = create(null);
-    cache.set(entry, store);
-    return store;
-  };
-  
+  const cache = umap(new WeakMap);
+
   return (
     /**
      * @param {IEntry} entry
      * @param {string} [id]
      */
     (entry, id) => {
-      const store = cache.get(entry) || setCache(entry);
+      const store = cache.get(entry) || cache.set(entry, create(null));
       const info = store[id] || (store[id] = newInfo());
       return (
         /**
