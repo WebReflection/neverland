@@ -588,15 +588,13 @@ var neverland = (function (exports) {
   /*! (c) Andrea Giammarchi - ISC */
 
   var find = function find(node) {
-    var childNodes = node.childNodes;
-    var length = childNodes.length;
-    var i = 0;
+    var firstChild = node.firstChild;
 
-    while (i < length) {
-      var child = childNodes[i++];
-      if (child.nodeType === 1) return child;
+    while (firstChild && firstChild.nodeType !== 1) {
+      firstChild = firstChild.nextSibling;
     }
 
+    if (firstChild) return firstChild;
     throw 'unobservable';
   };
 
@@ -1952,43 +1950,7 @@ var neverland = (function (exports) {
       html = _createRender.html,
       svg = _createRender.svg;
 
-  /**
-   * @typedef {<K>(template: TemplateStringsArray, ...values: any[]) => K} ITagFunction
-   */
-
-  /**
-   * An interface describing hooks counter
-   * @typedef ICounter
-   * @prop {number} a
-   * @prop {number} aLength
-   * @prop {number} i
-   * @prop {number} iLength
-   */
-
-  /**
-   * An interface describing hooks info
-   * @typedef IInfo
-   * @prop {IInfo[]} [sub]
-   * @prop {IEntry[]} stack
-   */
-
-  /**
-   * @typedef IEntry
-   * @prop {any} hook
-   * @prop {*} fn
-   */
-
-  /**
-   * @typedef {<T>(wm: WeakMap<object, T>, key: any, value: T) => T} CacheFn
-   */
-
   var create$1 = Object.create;
-  /**
-   * @template Args
-   * @param {(...args: Args[]) => unknown} fn
-   * @returns {(...args: Args[]) => Hook}
-   */
-
   var neverland = function neverland(fn) {
     return function () {
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
@@ -1998,247 +1960,103 @@ var neverland = (function (exports) {
       return new Hook(fn, args);
     };
   };
-  /**
-   * @typedef {{
-   *  (...args: any[]): Hole;
-   *  for: (entry: IEntry, id?: string) => (...args: any[]) => any
-   * }} IRenderer
-   */
-
-  /**
-   * @type {IRenderer}
-   */
-
   function html$1() {
     return new Hole('html', tta.apply(null, arguments));
   }
   html$1["for"] = createFor(html);
-  /**
-   * @type {IRenderer}
-   */
-
   function svg$1() {
     return new Hole('svg', tta.apply(null, arguments));
   }
   svg$1["for"] = createFor(svg);
-  /**
-   * @type {WeakMap<object, IInfo>}
-   */
-
-  var hooks$1 = umap(new WeakMap$1());
-  var holes = umap(new WeakMap$1());
-  /**
-   * @param {Node} where
-   * @param {any} what
-   */
-
+  var cache$1 = umap(new WeakMap$1());
   var render$1 = function render$1(where, what) {
     var hook = typeof what === 'function' ? what() : what;
-
-    if (hook instanceof Hook) {
-      var info = hooks$1.get(where) || hooks$1.set(where, {
-        stack: []
-      }); // no sub?
-
-      return render(where, retrieve(info, hook));
-    } else {
-      var _info = holes.get(where) || holes.set(where, newInfo());
-
-      var counter = createCounter(_info);
-      unrollArray(_info, hook.args, counter);
-      cleanUp(_info, counter);
-      return render(where, hook);
-    }
+    var info = cache$1.get(where) || cache$1.set(where, createCache$1());
+    return render(where, hook instanceof Hook ? unroll$1(info, hook) : (unrollHole(info, hook), hook));
   };
-  /**
-   * todo: describe cleanup
-   * @param {IInfo} param0
-   * @param {ICounter} param1
-   */
-
-  var cleanUp = function cleanUp(_ref, _ref2) {
-    var sub = _ref.sub,
-        stack = _ref.stack;
-    var a = _ref2.a,
-        i = _ref2.i,
-        aLength = _ref2.aLength,
-        iLength = _ref2.iLength;
-    if (a < aLength) sub.splice(a);
-    if (i < iLength) stack.splice(i);
-  };
-  /**
-   * todo: describe create counter
-   * @param {IInfo} param0
-   * @returns {ICounter}
-   */
-
-
-  var createCounter = function createCounter(_ref3) {
-    var sub = _ref3.sub,
-        stack = _ref3.stack;
-    return {
-      a: 0,
-      aLength: sub.length,
-      i: 0,
-      iLength: stack.length
-    };
-  };
-  /**
-   * @param {IInfo} info
-   * @param {IEntry} entry
-   */
-
 
   var createHook = function createHook(info, entry) {
     return augmentor$1(function () {
       var hole = entry.fn.apply(null, arguments);
 
       if (hole instanceof Hole) {
-        var counter = createCounter(info);
-        unrollArray(info, hole.args, counter);
-        cleanUp(info, counter);
+        unrollHole(info, hole);
         return view(entry, hole);
       }
 
       return hole;
     });
   };
-  /**
-   * @returns {IInfo}
-   */
 
-
-  var newInfo = function newInfo() {
+  var createCache$1 = function createCache() {
     return {
-      sub: [],
-      stack: []
+      stack: [],
+      entry: null
     };
   };
-  /**
-   * @param {IInfo} info
-   * @param {Hook} hook
-   */
 
+  var unroll$1 = function unroll(info, _ref) {
+    var _entry;
 
-  var retrieve = function retrieve(info, hook) {
-    return unroll$1(info, hook, {
-      i: 0,
-      iLength: info.stack.length
-    });
-  };
-  /**
-   * @param {IInfo} param0
-   * @param {Hook} param1
-   * @param {Pick<ICounter, 'i' | 'iLength'>} counter why partial ICounter?
-   */
+    var fn = _ref.fn,
+        template = _ref.template,
+        values = _ref.values;
+    var entry = info.entry;
 
-
-  var unroll$1 = function unroll(_ref4, _ref5, counter) {
-    var stack = _ref4.stack;
-    var fn = _ref5.fn,
-        args = _ref5.args;
-    var i = counter.i++;
-    var unknown = i === counter.iLength;
-    if (unknown) counter.iLength = stack.push({
-      fn: fn,
-      hook: null
-    });
-    var entry = stack[i];
-
-    if (unknown || entry.fn !== fn) {
-      entry.fn = fn;
-      entry.hook = createHook(newInfo(), entry);
+    if (!entry || entry.fn !== fn) {
+      info.entry = entry = {
+        fn: fn,
+        hook: null
+      };
+      entry.hook = createHook(createCache$1(), entry);
     }
 
-    return entry.hook.apply(null, args);
+    return (_entry = entry).hook.apply(_entry, [template].concat(_toConsumableArray(values)));
   };
-  /**
-   * @param {IInfo} info
-   * @param {any} args
-   * @param {ICounter} counter
-   */
 
+  var unrollHole = function unrollHole(info, _ref2) {
+    var values = _ref2.values;
+    unrollValues$1(info, values, values.length);
+  };
 
-  var unrollArray = function unrollArray(info, args, counter) {
-    for (var i = 1, length = args.length; i < length; i++) {
-      var hook = args[i];
+  var unrollValues$1 = function unrollValues(_ref3, values, length) {
+    var stack = _ref3.stack;
 
-      if (typeof(hook) === 'object' && hook) {
-        if (hook instanceof Hook) args[i] = unroll$1(info, hook, counter);else if (hook instanceof Hole) unrollArray(info, hook.args, counter);else if (isArray(hook)) {
-          for (var _i = 0, _length = hook.length; _i < _length; _i++) {
-            var inner = hook[_i];
-
-            if (typeof(inner) === 'object' && inner) {
-              if (inner instanceof Hook) {
-                var sub = info.sub;
-                var a = counter.a++;
-                if (a === counter.aLength) counter.aLength = sub.push(newInfo());
-                hook[_i] = retrieve(sub[a], inner);
-              } else if (inner instanceof Hole) unrollArray(info, inner.args, counter);
-            }
-          }
-        }
-      }
+    for (var i = 0, _length = values.length; i < _length; i++) {
+      var hook = values[i];
+      if (hook instanceof Hook) values[i] = unroll$1(stack[i] || (stack[i] = createCache$1()), hook);else if (hook instanceof Hole) unrollHole(stack[i] || (stack[i] = createCache$1()), hook);else if (isArray(hook)) unrollValues(stack[i] || (stack[i] = createCache$1()), hook, hook.length);else stack[i] = null;
     }
+
+    if (length < stack.length) stack.splice(length);
   };
-  /**
-   * @param {IEntry} entry
-   * @param {Hole} param1
-   */
 
-
-  var view = function view(entry, _ref6) {
-    var type = _ref6.type,
-        args = _ref6.args;
-    return (type === 'svg' ? svg : html)["for"](entry, type).apply(null, args);
+  var view = function view(entry, _ref4) {
+    var type = _ref4.type,
+        template = _ref4.template,
+        values = _ref4.values;
+    return (type === 'svg' ? svg : html)["for"](entry, type).apply(void 0, [template].concat(_toConsumableArray(values)));
   };
-  /**
-   * @class
-   * @param {Function} fn
-   * @param {any[]} args
-   */
-
 
   function Hook(fn, args) {
     this.fn = fn;
-    this.args = args;
+    this.template = args.shift();
+    this.values = args;
   }
-  /**
-   * @param {import('lighterhtml').Tag<HTMLElement | SVGElement>} lighter 
-   */
-
 
   function createFor(lighter) {
-    /**
-     * @type {WeakMap<IEntry, Record<string, IInfo>>}
-     */
     var cache = umap(new WeakMap$1());
-    return (
-      /**
-       * @param {IEntry} entry
-       * @param {string} [id]
-       */
-      function (entry, id) {
-        var store = cache.get(entry) || cache.set(entry, create$1(null));
-        var info = store[id] || (store[id] = newInfo());
-        return (
-          /**
-           * @param {any[]} args
-           */
-          function () {
-            var counter = createCounter(info);
+    return function (entry, id) {
+      var store = cache.get(entry) || cache.set(entry, create$1(null));
+      var info = store[id] || (store[id] = createCache$1());
+      return function (template) {
+        for (var _len2 = arguments.length, values = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+          values[_key2 - 1] = arguments[_key2];
+        }
 
-            for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-              args[_key2] = arguments[_key2];
-            }
-
-            unrollArray(info, args, counter);
-            cleanUp(info, counter);
-            return lighter["for"](entry, id).apply(null, args);
-          }
-        );
-      }
-    );
+        unrollValues$1(info, values);
+        return lighter["for"](entry, id).apply(void 0, [template].concat(values));
+      };
+    };
   }
 
   exports.contextual = contextual;

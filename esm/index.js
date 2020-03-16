@@ -1,4 +1,3 @@
-// @ts-check
 import WeakMap from '@ungap/weakmap';
 import tta from '@ungap/template-tag-arguments';
 import {augmentor} from 'dom-augmentor';
@@ -12,95 +11,34 @@ import {
   render as $render
 } from 'lighterhtml';
 
-/**
- * @typedef {<K>(template: TemplateStringsArray, ...values: any[]) => K} ITagFunction
- */
-
-/**
- * An interface describing hooks counter
- * @typedef ICounter
- * @prop {number} a
- * @prop {number} aLength
- * @prop {number} i
- * @prop {number} iLength
- */
-
-/**
- * An interface describing hooks info
- * @typedef IInfo
- * @prop {IInfo[]} [sub]
- * @prop {IEntry[]} stack
- */
-
-/**
- * @typedef IEntry
- * @prop {any} hook
- * @prop {*} fn
- */
-
-/**
- * @typedef {<T>(wm: WeakMap<object, T>, key: any, value: T) => T} CacheFn
- */
-
 const {create} = Object;
 
-/**
- * @template Args
- * @param {(...args: Args[]) => unknown} fn
- * @returns {(...args: Args[]) => Hook}
- */
 export const neverland = fn => (...args) => new Hook(fn, args);
 
-/**
- * @typedef {{
- *  (...args: any[]): Hole;
- *  for: (entry: IEntry, id?: string) => (...args: any[]) => any
- * }} IRenderer
- */
-
-/**
- * @type {IRenderer}
- */
 export function html() {
   return new Hole('html', tta.apply(null, arguments));
 };
 html.for = createFor($html);
 
-/**
- * @type {IRenderer}
- */
 export function svg() {
   return new Hole('svg', tta.apply(null, arguments));
 };
 svg.for = createFor($svg);
 
-/**
- * @type {WeakMap<object, IInfo>}
- */
-const hooks = umap(new WeakMap);
-const holes = umap(new WeakMap);
+const cache = umap(new WeakMap);
 
-/**
- * @param {Node} where
- * @param {any} what
- */
 export const render = (where, what) => {
   const hook = typeof what === 'function' ? what() : what;
-  if (hook instanceof Hook) {
-    const info = hooks.get(where) || hooks.set(where, {stack: []}); // no sub?
-    return $render(where, retrieve(info, hook));
-  }
-  else {
-    const info = holes.get(where) || holes.set(where, newInfo());
-    const counter = createCounter(info);
-    unrollArray(info, hook.args, counter);
-    cleanUp(info, counter);
-    return $render(where, hook);
-  }
+  const info = cache.get(where) || cache.set(where, createCache());
+  return $render(
+    where,
+    hook instanceof Hook ?
+      unroll(info, hook) :
+      (unrollHole(info, hook), hook)
+  );
 };
 
 export {
-  // @ts-ignore why is this not typed in dom-augmentor?
   contextual,
   useState,
   useEffect,
@@ -112,153 +50,66 @@ export {
   useLayoutEffect
 } from 'dom-augmentor';
 
-/**
- * todo: describe cleanup
- * @param {IInfo} param0
- * @param {ICounter} param1
- */
-const cleanUp = ({sub, stack}, {a, i, aLength, iLength}) => {
-  if (a < aLength)
-    sub.splice(a);
-  if (i < iLength)
-    stack.splice(i);
-};
-
-/**
- * todo: describe create counter
- * @param {IInfo} param0
- * @returns {ICounter}
- */
-const createCounter = ({sub, stack}) => ({
-  a: 0, aLength: sub.length,
-  i: 0, iLength: stack.length
-});
-
-/**
- * @param {IInfo} info
- * @param {IEntry} entry
- */
 const createHook = (info, entry) => augmentor(function () {
   const hole = entry.fn.apply(null, arguments);
   if (hole instanceof Hole) {
-    const counter = createCounter(info);
-    unrollArray(info, hole.args, counter);
-    cleanUp(info, counter);
+    unrollHole(info, hole);
     return view(entry, hole);
   }
   return hole;
 });
 
-/**
- * @returns {IInfo}
- */
-const newInfo = () => ({sub: [], stack: []});
+const createCache = () => ({stack: [], entry: null});
 
-/**
- * @param {IInfo} info
- * @param {Hook} hook
- */
-const retrieve = (info, hook) => unroll(info, hook, {
-  i: 0,
-  iLength: info.stack.length
-});
-
-/**
- * @param {IInfo} param0
- * @param {Hook} param1
- * @param {Pick<ICounter, 'i' | 'iLength'>} counter why partial ICounter?
- */
-const unroll = ({stack}, {fn, args}, counter) => {
-  const i = counter.i++;
-  const unknown = i === counter.iLength;
-  if (unknown)
-    counter.iLength = stack.push({fn, hook: null});
-  const entry = stack[i];
-  if (unknown || entry.fn !== fn) {
-    entry.fn = fn;
-    entry.hook = createHook(newInfo(), entry);
+const unroll = (info, {fn, template, values}) => {
+  let {entry} = info;
+  if (!entry || entry.fn !== fn) {
+    info.entry = (entry = {fn, hook: null});
+    entry.hook = createHook(createCache(), entry);
   }
-  return entry.hook.apply(null, args);
+  return entry.hook(template, ...values);
 };
 
-/**
- * @param {IInfo} info
- * @param {any} args
- * @param {ICounter} counter
- */
-const unrollArray = (info, args, counter) => {
-  for (let i = 1, {length} = args; i < length; i++) {
-    const hook = args[i];
-    if (typeof hook === 'object' && hook) {
-      if (hook instanceof Hook)
-        args[i] = unroll(info, hook, counter);
-      else if (hook instanceof Hole)
-        unrollArray(info, hook.args, counter);
-      else if (isArray(hook)) {
-        for (let i = 0, {length} = hook; i < length; i++) {
-          const inner = hook[i];
-          if (typeof inner === 'object' && inner) {
-            if (inner instanceof Hook) {
-              const {sub} = info;
-              const a = counter.a++;
-              if (a === counter.aLength)
-                counter.aLength = sub.push(newInfo());
-              hook[i] = retrieve(sub[a], inner);
-            }
-            else if (inner instanceof Hole)
-              unrollArray(info, inner.args, counter);
-          }
-        }
-      }
-    }
-  }
+const unrollHole = (info, {values}) => {
+  unrollValues(info, values, values.length);
 };
 
-/**
- * @param {IEntry} entry
- * @param {Hole} param1
- */
-const view = (entry, {type, args}) =>
+const unrollValues = ({stack}, values, length) => {
+  for (let i = 0, {length} = values; i < length; i++) {
+    const hook = values[i];
+    if (hook instanceof Hook)
+      values[i] = unroll(stack[i] || (stack[i] = createCache()), hook);
+    else if (hook instanceof Hole)
+      unrollHole(stack[i] || (stack[i] = createCache()), hook);
+    else if (isArray(hook))
+      unrollValues(stack[i] || (stack[i] = createCache()), hook, hook.length);
+    else
+      stack[i] = null;
+  }
+  if (length < stack.length)
+    stack.splice(length);
+};
+
+const view = (entry, {type, template, values}) =>
               (type === 'svg' ? $svg : $html)
-                .for(entry, type)
-                .apply(null, args);
+                .for(entry, type)(template, ...values);
 
-/**
- * @class
- * @param {Function} fn
- * @param {any[]} args
- */
 function Hook(fn, args) {
   this.fn = fn;
-  this.args = args;
+  this.template = args.shift();
+  this.values = args;
 }
 
-/**
- * @param {import('lighterhtml').Tag<HTMLElement | SVGElement>} lighter 
- */
 function createFor(lighter) {
-  /**
-   * @type {WeakMap<IEntry, Record<string, IInfo>>}
-   */
   const cache = umap(new WeakMap);
-
   return (
-    /**
-     * @param {IEntry} entry
-     * @param {string} [id]
-     */
     (entry, id) => {
       const store = cache.get(entry) || cache.set(entry, create(null));
-      const info = store[id] || (store[id] = newInfo());
+      const info = store[id] || (store[id] = createCache());
       return (
-        /**
-         * @param {any[]} args
-         */
-        (...args) => {
-          const counter = createCounter(info);
-          unrollArray(info, args, counter);
-          cleanUp(info, counter);
-          return lighter.for(entry, id).apply(null, args);
+        (template, ...values) => {
+          unrollValues(info, values);
+          return lighter.for(entry, id)(template, ...values);
         }
       );
     }
