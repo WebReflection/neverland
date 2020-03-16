@@ -2022,7 +2022,7 @@ var neverland = (function (exports) {
   var unrollValues$1 = function unrollValues(_ref3, values, length) {
     var stack = _ref3.stack;
 
-    for (var i = 0, _length = values.length; i < _length; i++) {
+    for (var i = 0; i < length; i++) {
       var hook = values[i];
       if (hook instanceof Hook) values[i] = unroll$1(stack[i] || (stack[i] = createCache$1()), hook);else if (hook instanceof Hole) unrollHole(stack[i] || (stack[i] = createCache$1()), hook);else if (isArray(hook)) unrollValues(stack[i] || (stack[i] = createCache$1()), hook, hook.length);else stack[i] = null;
     }

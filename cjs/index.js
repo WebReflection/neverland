@@ -81,7 +81,7 @@ const unrollHole = (info, {values}) => {
 };
 
 const unrollValues = ({stack}, values, length) => {
-  for (let i = 0, {length} = values; i < length; i++) {
+  for (let i = 0; i < length; i++) {
     const hook = values[i];
     if (hook instanceof Hook)
       values[i] = unroll(stack[i] || (stack[i] = createCache()), hook);
