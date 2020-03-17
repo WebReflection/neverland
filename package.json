@@ -36,7 +36,7 @@
     "@ungap/template-tag-arguments": "^0.3.1",
     "@ungap/weakmap": "^0.1.4",
     "dom-augmentor": "^2.0.7",
-    "lighterhtml": "^2.4.1",
+    "lighterhtml": "^2.5.0",
     "uarray": "^1.0.0",
     "umap": "^1.0.2"
   },

@@ -1650,7 +1650,7 @@ var neverland = (function (exports) {
 
   var hyperRef = function hyperRef(node) {
     return function (ref) {
-      ref.current = node;
+      if (typeof ref === 'function') ref(node);else ref.current = node;
     };
   };
 
