@@ -46,9 +46,9 @@ const LinkLi = ({text, href}, highlighted) => html`
 `;
 
 // some container with some click logic that uses hooks: $(wrap it)
-const Links = $(({items}) => {
+const Links = $((items) => {
   const [clicked, changeState] = useState(-1);
-  const onclick = useMemo(event => {
+  const onclick = useCallback(event => {
     const li = event.target.closest('li');
     changeState(
       // changeState accordingly to the clicked index
