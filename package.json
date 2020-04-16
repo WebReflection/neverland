@@ -43,7 +43,7 @@
   "devDependencies": {
     "@babel/core": "^7.9.0",
     "@babel/preset-env": "^7.9.5",
-    "ascjs": "^3.1.2",
+    "ascjs": "^4.0.0",
     "basichtml": "^2.2.3",
     "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.12.1",
