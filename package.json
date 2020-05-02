@@ -34,7 +34,7 @@
   },
   "dependencies": {
     "@ungap/template-tag-arguments": "^0.3.1",
-    "@ungap/weakmap": "^0.1.4",
+    "@ungap/weakmap": "^0.2.0",
     "dom-augmentor": "^2.0.8",
     "lighterhtml": "^3.1.0",
     "uarray": "^1.0.0",
