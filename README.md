@@ -98,7 +98,7 @@ All hooks are provided by [augmentor](https://github.com/WebReflection/augmentor
 
 
 
-#### About `useImperativeMethods`
+#### About `useImperativeHandle`
 
 This hook is strictly _React_ oriented with no meaning in current _dom-augmentor_ world.
 
