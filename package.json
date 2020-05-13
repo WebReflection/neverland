@@ -44,7 +44,7 @@
     "@babel/core": "^7.9.6",
     "@babel/preset-env": "^7.9.6",
     "ascjs": "^4.0.0",
-    "basichtml": "^2.2.8",
+    "basichtml": "^2.2.9",
     "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.12.3",
     "nightmare": "^3.0.2",
