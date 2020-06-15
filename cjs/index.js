@@ -1,6 +1,5 @@
 'use strict';
 const WeakMap = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('@ungap/weakmap'));
-const tta = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('@ungap/template-tag-arguments'));
 const {augmentor} = require('dom-augmentor');
 const {isArray} = require('uarray');
 const umap = (m => m.__esModule ? /* istanbul ignore next */ m.default : /* istanbul ignore next */ m)(require('umap'));
@@ -120,4 +119,11 @@ function createFor(lighter) {
       );
     }
   );
+}
+
+function tta() {
+  let out = [], i = 0, {length} = arguments;
+  while (i < length)
+    out.push(arguments[i++]);
+  return out;
 }
