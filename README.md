@@ -7,6 +7,10 @@
 
 - - -
 
+**Update** if you're looking for something even smaller than _neverlnd_, don't miss [µland](https://github.com/WebReflection/uland#readme)!
+
+- - -
+
 ### V4 Breaking Changes
 
 Please be sure you understand the [breaking changes landed in lighterhtml](https://github.com/WebReflection/lighterhtml#v4-breaking-changes).
