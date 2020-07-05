@@ -7,7 +7,7 @@
 
 - - -
 
-**Update** if you're looking for something even smaller than _neverlnd_, don't miss [µland](https://github.com/WebReflection/uland#readme)!
+**Update** if you're looking for something even smaller than _neverland_, don't miss [µland](https://github.com/WebReflection/uland#readme)!
 
 - - -
 
