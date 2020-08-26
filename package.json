@@ -35,7 +35,7 @@
   "dependencies": {
     "@ungap/weakmap": "^0.2.1",
     "dom-augmentor": "^2.0.8",
-    "lighterhtml": "^4.1.0",
+    "lighterhtml": "^4.1.1",
     "uarray": "^1.0.0",
     "umap": "^1.0.2"
   },
