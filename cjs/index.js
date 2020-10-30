@@ -13,7 +13,6 @@ const {
 
 const {create} = Object;
 
-const Component = fn => (...args) => new Hook(fn, args);
 exports.Component = Component;
 const neverland = Component;
 exports.neverland = neverland;
@@ -150,4 +149,8 @@ function tta() {
   while (i < length)
     out.push(arguments[i++]);
   return out;
+}
+
+function Component(fn) {
+  return (...args) => new Hook(fn, args);
 }

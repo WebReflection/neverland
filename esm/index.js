@@ -12,7 +12,7 @@ import {
 
 const {create} = Object;
 
-export const Component = fn => (...args) => new Hook(fn, args);
+export {Component};
 export const neverland = Component;
 
 export function html() {
@@ -143,4 +143,8 @@ function tta() {
   while (i < length)
     out.push(arguments[i++]);
   return out;
+}
+
+function Component(fn) {
+  return (...args) => new Hook(fn, args);
 }

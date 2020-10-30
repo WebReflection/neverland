@@ -1688,15 +1688,6 @@ var neverland = (function (exports) {
   }
 
   var create$1 = Object.create;
-  var Component = function Component(fn) {
-    return function () {
-      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
-        args[_key] = arguments[_key];
-      }
-
-      return new Hook(fn, args);
-    };
-  };
   var neverland = Component;
   function html$1() {
     return new Hole('html', tta$1.apply(null, arguments));
@@ -1811,8 +1802,8 @@ var neverland = (function (exports) {
       var store = cache.get(entry) || cache.set(entry, create$1(null));
       var info = store[id] || (store[id] = createCache$1(null));
       return function (template) {
-        for (var _len2 = arguments.length, values = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-          values[_key2 - 1] = arguments[_key2];
+        for (var _len = arguments.length, values = new Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+          values[_key - 1] = arguments[_key];
         }
 
         unrollValues$1(info, values);
@@ -1831,6 +1822,16 @@ var neverland = (function (exports) {
     }
 
     return out;
+  }
+
+  function Component(fn) {
+    return function () {
+      for (var _len2 = arguments.length, args = new Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+        args[_key2] = arguments[_key2];
+      }
+
+      return new Hook(fn, args);
+    };
   }
 
   exports.Component = Component;
