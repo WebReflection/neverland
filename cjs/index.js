@@ -13,7 +13,9 @@ const {
 
 const {create} = Object;
 
-const neverland = fn => (...args) => new Hook(fn, args);
+const Component = fn => (...args) => new Hook(fn, args);
+exports.Component = Component;
+const neverland = Component;
 exports.neverland = neverland;
 
 function html() {
@@ -29,10 +31,11 @@ exports.svg = svg;
 svg.for = createFor($svg);
 
 const cache = umap(new WeakMap);
-
 const render = (where, what) => {
   const hook = typeof what === 'function' ? what() : what;
-  const info = cache.get(where) || cache.set(where, createCache());
+  const info = cache.get(where) || cache.set(where, createCache(null));
+  info.w = where;
+  info.W = what;
   return $render(
     where,
     hook instanceof Hook ?
@@ -55,22 +58,42 @@ exports.render = render;
   exports.useLayoutEffect = m.useLayoutEffect;
 })(require('dom-augmentor'));
 
+let update = false;
+const updateEntry = (entry, node) => {
+  if (node !== entry.node) {
+    if (entry.node)
+      update = true;
+    entry.node = node;
+  }
+};
+
 const createHook = (info, entry) => augmentor(function () {
   const hole = entry.fn.apply(null, arguments);
   if (hole instanceof Hole) {
     unrollHole(info, hole);
-    return view(entry, hole);
+    updateEntry(entry, view(entry, hole));
   }
-  return hole;
+  else
+    updateEntry(entry, hole);
+  try { return entry.node; }
+  finally {
+    if (update) {
+      update = false;
+      let p = info;
+      while (p.p)
+        p = p.p;
+      render(p.w, p.W);
+    }
+  }
 });
 
-const createCache = () => ({stack: [], entry: null});
+const createCache = p => ({p, stack: [], entry: null});
 
 const unroll = (info, {fn, template, values}) => {
   let {entry} = info;
   if (!entry || entry.fn !== fn) {
     info.entry = (entry = {fn, hook: null});
-    entry.hook = createHook(createCache(), entry);
+    entry.hook = createHook(createCache(info), entry);
   }
   return entry.hook(template, ...values);
 };
@@ -79,15 +102,16 @@ const unrollHole = (info, {values}) => {
   unrollValues(info, values, values.length);
 };
 
-const unrollValues = ({stack}, values, length) => {
+const unrollValues = (info, values, length) => {
+  const {stack} = info;
   for (let i = 0; i < length; i++) {
     const hook = values[i];
     if (hook instanceof Hook)
-      values[i] = unroll(stack[i] || (stack[i] = createCache()), hook);
+      values[i] = unroll(stack[i] || (stack[i] = createCache(info)), hook);
     else if (hook instanceof Hole)
-      unrollHole(stack[i] || (stack[i] = createCache()), hook);
+      unrollHole(stack[i] || (stack[i] = createCache(info)), hook);
     else if (isArray(hook))
-      unrollValues(stack[i] || (stack[i] = createCache()), hook, hook.length);
+      unrollValues(stack[i] || (stack[i] = createCache(info)), hook, hook.length);
     else
       stack[i] = null;
   }
@@ -110,7 +134,7 @@ function createFor(lighter) {
   return (
     (entry, id) => {
       const store = cache.get(entry) || cache.set(entry, create(null));
-      const info = store[id] || (store[id] = createCache());
+      const info = store[id] || (store[id] = createCache(null));
       return (
         (template, ...values) => {
           unrollValues(info, values);

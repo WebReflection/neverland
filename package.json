@@ -9,7 +9,7 @@
   "scripts": {
     "build": "npm run rollup && drop-babel-typeof index.js && npm run cjs && npm run min && npm run test && npm run size",
     "build:types": "tsc --allowJs --emitDeclarationOnly",
-    "cjs": "ascjs esm cjs",
+    "cjs": "ascjs --no-default esm cjs",
     "min": "echo '/*! (c) Andrea Giammarchi - ISC */' > min.js && uglifyjs index.js -c -m >> min.js",
     "rollup": "rollup --config rollup.config.js",
     "size": "cat index.js | wc -c;cat min.js | wc -c;gzip -c9 min.js | wc -c",
@@ -40,17 +40,17 @@
     "umap": "^1.0.2"
   },
   "devDependencies": {
-    "@babel/core": "^7.11.4",
-    "@babel/preset-env": "^7.11.0",
+    "@babel/core": "^7.12.3",
+    "@babel/preset-env": "^7.12.1",
     "ascjs": "^4.0.1",
     "basichtml": "^2.3.0",
     "drop-babel-typeof": "^1.0.3",
     "http-server": "^0.12.3",
     "nightmare": "^3.0.2",
-    "rollup": "^2.26.5",
+    "rollup": "^2.32.1",
     "rollup-plugin-babel": "^4.4.0",
     "rollup-plugin-node-resolve": "^5.2.0",
-    "typescript": "^4.0.2",
+    "typescript": "^4.0.5",
     "uglify-es": "^3.3.9"
   },
   "repository": {

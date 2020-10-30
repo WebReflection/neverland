@@ -20,9 +20,9 @@ Please be sure you understand the [breaking changes landed in lighterhtml](https
 ## Hooks via lighterhtml
 
 ```js
-import {neverland as $, render, html, useState} from 'neverland';
+import {Component, render, html, useState} from 'neverland';
 
-const Counter = $((initialState) => {
+const Counter = Component((initialState) => {
   const [count, setCount] = useState(initialState);
   return html`
   <button onclick=${() => setCount(count + 1)}>

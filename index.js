@@ -1688,7 +1688,7 @@ var neverland = (function (exports) {
   }
 
   var create$1 = Object.create;
-  var neverland = function neverland(fn) {
+  var Component = function Component(fn) {
     return function () {
       for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
         args[_key] = arguments[_key];
@@ -1697,6 +1697,7 @@ var neverland = (function (exports) {
       return new Hook(fn, args);
     };
   };
+  var neverland = Component;
   function html$1() {
     return new Hole('html', tta$1.apply(null, arguments));
   }
@@ -1708,8 +1709,18 @@ var neverland = (function (exports) {
   var cache$1 = umap(new WeakMap$1());
   var render$1 = function render$1(where, what) {
     var hook = typeof what === 'function' ? what() : what;
-    var info = cache$1.get(where) || cache$1.set(where, createCache$1());
+    var info = cache$1.get(where) || cache$1.set(where, createCache$1(null));
+    info.w = where;
+    info.W = what;
     return render(where, hook instanceof Hook ? unroll$1(info, hook) : (unrollHole(info, hook), hook));
+  };
+  var update$1 = false;
+
+  var updateEntry = function updateEntry(entry, node) {
+    if (node !== entry.node) {
+      if (entry.node) update$1 = true;
+      entry.node = node;
+    }
   };
 
   var createHook = function createHook(info, entry) {
@@ -1718,15 +1729,29 @@ var neverland = (function (exports) {
 
       if (hole instanceof Hole) {
         unrollHole(info, hole);
-        return view(entry, hole);
-      }
+        updateEntry(entry, view(entry, hole));
+      } else updateEntry(entry, hole);
 
-      return hole;
+      try {
+        return entry.node;
+      } finally {
+        if (update$1) {
+          update$1 = false;
+          var p = info;
+
+          while (p.p) {
+            p = p.p;
+          }
+
+          render$1(p.w, p.W);
+        }
+      }
     });
   };
 
-  var createCache$1 = function createCache() {
+  var createCache$1 = function createCache(p) {
     return {
+      p: p,
       stack: [],
       entry: null
     };
@@ -1745,7 +1770,7 @@ var neverland = (function (exports) {
         fn: fn,
         hook: null
       };
-      entry.hook = createHook(createCache$1(), entry);
+      entry.hook = createHook(createCache$1(info), entry);
     }
 
     return (_entry = entry).hook.apply(_entry, [template].concat(_toConsumableArray(values)));
@@ -1756,21 +1781,21 @@ var neverland = (function (exports) {
     unrollValues$1(info, values, values.length);
   };
 
-  var unrollValues$1 = function unrollValues(_ref3, values, length) {
-    var stack = _ref3.stack;
+  var unrollValues$1 = function unrollValues(info, values, length) {
+    var stack = info.stack;
 
     for (var i = 0; i < length; i++) {
       var hook = values[i];
-      if (hook instanceof Hook) values[i] = unroll$1(stack[i] || (stack[i] = createCache$1()), hook);else if (hook instanceof Hole) unrollHole(stack[i] || (stack[i] = createCache$1()), hook);else if (isArray(hook)) unrollValues(stack[i] || (stack[i] = createCache$1()), hook, hook.length);else stack[i] = null;
+      if (hook instanceof Hook) values[i] = unroll$1(stack[i] || (stack[i] = createCache$1(info)), hook);else if (hook instanceof Hole) unrollHole(stack[i] || (stack[i] = createCache$1(info)), hook);else if (isArray(hook)) unrollValues(stack[i] || (stack[i] = createCache$1(info)), hook, hook.length);else stack[i] = null;
     }
 
     if (length < stack.length) stack.splice(length);
   };
 
-  var view = function view(entry, _ref4) {
-    var type = _ref4.type,
-        template = _ref4.template,
-        values = _ref4.values;
+  var view = function view(entry, _ref3) {
+    var type = _ref3.type,
+        template = _ref3.template,
+        values = _ref3.values;
     return (type === 'svg' ? svg : html)["for"](entry, type).apply(void 0, [template].concat(_toConsumableArray(values)));
   };
 
@@ -1784,7 +1809,7 @@ var neverland = (function (exports) {
     var cache = umap(new WeakMap$1());
     return function (entry, id) {
       var store = cache.get(entry) || cache.set(entry, create$1(null));
-      var info = store[id] || (store[id] = createCache$1());
+      var info = store[id] || (store[id] = createCache$1(null));
       return function (template) {
         for (var _len2 = arguments.length, values = new Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
           values[_key2 - 1] = arguments[_key2];
@@ -1808,6 +1833,7 @@ var neverland = (function (exports) {
     return out;
   }
 
+  exports.Component = Component;
   exports.contextual = contextual;
   exports.createContext = createContext;
   exports.html = html$1;
@@ -1822,6 +1848,8 @@ var neverland = (function (exports) {
   exports.useReducer = useReducer;
   exports.useRef = useRef;
   exports.useState = useState;
+
+  Object.defineProperty(exports, '__esModule', { value: true });
 
   return exports;
 

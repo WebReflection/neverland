@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="module">
+    import {Component, render, html, useState} from '../esm/index.js';
+    const fetcher = url => fetch(url).then(r => r.json());
+
+    const swr = new Set;
+    const useSWR = (path, fetcher) => {
+      let [data, update] = useState(null);
+      if (!swr.has(path)) {
+        fetcher(path).then(update, () => update(new Error(path)));
+        swr.add(path);
+      }
+      const isError = data instanceof Error;
+      return {
+        data: isError ? null : data,
+        error: isError ? data : null
+      };
+    };
+
+    const Rando = Component(url => {
+      const {data, error} = useSWR(url, fetcher);
+      if (error) return html`<div>failed to load</div>`;
+      if (!data) return html`<div>loading...</div>`;
+      return html`<div>${data.title}</div>`;
+    });
+
+    render(
+      document.body,
+      Rando('//jsonplaceholder.typicode.com/todos/1')
+    );
+
+  </script>
+</head>
+<body>
+  
+</body>
+</html>
