@@ -11,12 +11,6 @@
 
 - - -
 
-### V4 Breaking Changes
-
-Please be sure you understand the [breaking changes landed in lighterhtml](https://github.com/WebReflection/lighterhtml#v4-breaking-changes).
-
-- - -
-
 ## Hooks via lighterhtml
 
 ```js
