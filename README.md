@@ -5,6 +5,11 @@
 ![Cosmic Timetraveler](img/cosmic-timetraveler-unsplash-1080.jpg)
 <sup>**Photo by [Cosmic Timetraveler](https://unsplash.com/photos/1rmtbFGjIBs?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText) on [Unsplash](https://unsplash.com/search/photos/island?utm_source=unsplash&utm_medium=referral&utm_content=creditCopyText)**</sup>
 
+
+### 📣 Community Announcement
+
+Please ask questions in the [dedicated forum](https://webreflection.boards.net/) to help the community around this project grow ♥
+
 - - -
 
 **Update** if you're looking for something even smaller than _neverland_, don't miss [µland](https://github.com/WebReflection/uland#readme)!
